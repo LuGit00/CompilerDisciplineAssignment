@@ -1,6 +1,3 @@
-# CompilerDisciplineAssignment
-Projeto de uma implementação de um compilador feito com flex e yacc para uma disciplina de universidade de compiladores.
-
 # Compilador C - Projeto da Disciplina Compiladores 1
 
 ## Visão Geral do Projeto
@@ -11,12 +8,12 @@ Este repositório contém o projeto de um compilador para uma sublinguagem de C,
 - **Contato do Professor:** sergiofreitas@unb.br
 - **GitHub do Professor:** https://github.com/sergioaafreitas
 
-## Equipe 13
+## Equipe
 
 A nossa equipe é atualmente identificada pelo número **13**, mediante divisão/organização realizada pelo professor da disciplina.
 
 <div align="center">
-  <p><strong>Tabela 1 – Membros da Equipe 13</strong></p>
+  <p><strong>Tabela 1 – Membros da Equipe</strong></p>
   <table>
     <tr>
       <td align="center">
