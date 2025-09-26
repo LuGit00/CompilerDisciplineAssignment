@@ -1,5 +1,6 @@
 # CompilerDisciplineAssignment
 Projeto de uma implementação de um compilador feito com flex e yacc para uma disciplina de universidade de compiladores.
+
 # Compilador C - Projeto da Disciplina Compiladores 1
 
 ## Visão Geral do Projeto
@@ -180,8 +181,8 @@ make clean
 
 ## Como Contribuir
 
-Consulte o arquivo [`CONTRIBUTING.md`](https://github.com/LuGit00/CompilerDisciplineAssignment/blob/main/CONTRIBUTING.md) para obter informações sobre como configurar o ambiente de desenvolvimento, submeter alterações e seguir as convenções de código.
+Consulte o arquivo [`CONTRIBUTING.md`](https://github.com/LuGit00/CompilerDisciplineAssignment?tab=contributing-ov-file) para obter informações sobre como configurar o ambiente de desenvolvimento, submeter alterações e seguir as convenções de código.
 
 ## Licença
 
-Este projeto está licenciado sob a `GNU General Public License v3.0`. Consulte o arquivo [`LICENSE`](https://github.com/LuGit00/CompilerDisciplineAssignment/blob/main/LICENSE) para mais detalhes.
+Este projeto está licenciado sob a `GNU General Public License v3.0`. Consulte o arquivo [`LICENSE`](https://github.com/LuGit00/CompilerDisciplineAssignment?tab=GPL-3.0-1-ov-file) para mais detalhes.
