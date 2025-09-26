@@ -62,36 +62,50 @@ Nosso compilador será capaz de traduzir código-fonte escrito em uma sublinguag
 
 ```
 .
-├── README.md                 # Visão geral do projeto, equipe, objetivos e marcos.
-├── CONTRIBUTING.md           # Guia para novos contribuidores e fluxo de trabalho.
-├── LICENSE                   # Informações sobre a licença do projeto.
-├── docs/                     # Documentação detalhada do projeto.
-│   ├── PROJECT_STRUCTURE.md  # Este documento.
-│   ├── DECISION_LOG.md       # Registro de decisões técnicas importantes.
-│   ├── SPRINT_PLANNING.md    # Detalhamento do planejamento das sprints.
-│   ├── GLOSSARY.md           # Glossário de termos técnicos.
-│   ├── IMPROVEMENT_GUIDE.md  # Guia para melhorias e novas funcionalidades.
-│   └── DISCIPLINE_EXPLANATION.md # Explicação didática da disciplina.
-├── src/                      # Código-fonte do compilador.
-│   ├── lexer/                # Arquivos relacionados à análise léxica (Flex).
-│   │   └── scanner.l         # Definições de tokens e regras léxicas.
-│   ├── parser/               # Arquivos relacionados à análise sintática (Bison).
-│   │   └── parser.y          # Definições da gramática e ações semânticas.
-│   ├── semantic/             # Arquivos para análise semântica.
-│   │   ├── symbol_table.h    # Definição da tabela de símbolos.
-│   │   ├── symbol_table.c    # Implementação da tabela de símbolos.
-│   │   ├── ast.h             # Definição da Árvore Sintática Abstrata (AST).
-│   │   └── ast.c             # Implementação da AST e funções de manipulação.
-│   ├── ir_generator/         # Arquivos para geração de código intermediário.
-│   │   └── ir_generator.c    # Lógica para traduzir AST para código intermediário.
-│   ├── code_generator/       # Arquivos para geração de código final.
-│   │   └── code_generator.c  # Lógica para traduzir código intermediário para a linguagem alvo.
-│   ├── main.c                # Ponto de entrada principal do compilador.
-│   └── Makefile              # Script para compilação do projeto.
-└── tests/                    # Testes e exemplos de código.
-   ├── unit_tests/           # Testes de unidade para módulos específicos.
-   ├── integration_tests/    # Testes de integração para o compilador completo.
-   └── examples/             # Exemplos de código-fonte na sublinguagem C.
+├── CONTRIBUTING.md                # Guia para novos contribuidores e fluxo de trabalho.
+├── docs                           # Documentação detalhada do projeto.
+│   └── ansi-iso-9899-1990-1.pdf
+├── LICENSE                        # Informações sobre a licença do projeto.
+├── lucianos_workspace
+│   ├── comp                       # Executável auxiliar ou artefatos de build local.
+│   ├── comp.c                     # Fonte C para testes manuais do Luciano.
+│   ├── comp.c.asm                 # Saída em assembly gerada a partir de comp.c.
+│   ├── lex.l                      # Definições Flex usadas em protótipos iniciais.
+│   ├── nasm
+│   │   ├── abi.asm                # Rotinas em assembly relacionadas a convenções de chamada.
+│   │   ├── abi.c
+│   │   ├── main.asm               # Exemplo principal em NASM.
+│   │   ├── nasmdoc.pdf            # Documentação da sintaxe NASM.
+│   │   ├── out                    # Saídas geradas pela montagem.
+│   │   └── run.sh                 # Script para compilar e executar em NASM.
+│   ├── out                        # Diretório de saídas do workspace.
+│   ├── run.sh                     # Script de execução rápido do workspace.
+│   ├── syn.y                      # Protótipo de gramática inicial em Bison.
+│   └── test.mcmm                  # Arquivo de teste específico do workspace.
+├── README.md                      # Visão geral do projeto, equipe, objetivos e marcos.
+├── src                            # Código-fonte do compilador.
+│   ├── code_generator             # Backend: traduz IR para código alvo.
+│   ├── ir_generator
+│   │   ├── tac.c                  # Implementação da geração de TAC (Three Address Code).
+│   │   └── tac.h                  # Definições e estruturas do TAC.
+│   ├── lexer                      # Arquivos relacionados à análise léxica (Flex).
+│   │   └── scanner.l
+│   ├── main.c                     # Ponto de entrada do compilador.
+│   ├── Makefile                   # Script de automação de build.
+│   ├── parser                     # Definições da gramática e ações semânticas.
+│   │   ├── parser.output          # Saída detalhada do Bison (debug de conflitos).
+│   │   └── parser.y
+│   └── semantic
+│       ├── ast.c                  # Implementação da AST e funções auxiliares.
+│       ├── ast.h                  # Estruturas da AST.
+│       ├── symbol_table.c         # Implementação da tabela de símbolos.
+│       └── symbol_table.h         # Definição da tabela de símbolos.
+└── tests                          # Conjunto de testes do compilador.
+    ├── examples                   # Exemplos de programas de entrada.
+    │   ├── syntax_error.c
+    │   └── valid_program.c
+    ├── integration_tests          # Testes de integração de todo o compilador.
+    └── unit_tests                 # Testes de unidade dos módulos específicos.
 ```
 
 ## Fases do Compilador
@@ -168,11 +182,11 @@ make clean
 ## Marcos Importantes (Pontos de Controle)
 
 -   **P1:** Avaliação inicial do projeto, incluindo a definição da linguagem, planejamento das sprints e o progresso das fases léxica e sintática inicial.
-   -   **Período de Envio do Formulário:** 25/04/2025 a 28/04/2025
+   -   **Período de Envio do Formulário:** [Data a ser definida pelo professor]
    -   **Apresentação:** [Data a ser definida pelo professor]
 
 -   **P2:** Avaliação do progresso intermediário, com foco nas funcionalidades principais desenvolvidas, melhorias e ajustes no planejamento.
-   -   **Período de Envio do Formulário:** 30/05/2025 a 02/06/2025
+   -   **Período de Envio do Formulário:** [Data a ser definida pelo professor]
    -   **Apresentação:** [Data a ser definida pelo professor]
 
 -   **Entrega Final e Entrevista:** Entrega do compilador completo e entrevista presencial com a equipe para demonstração e justificativa das decisões técnicas.
