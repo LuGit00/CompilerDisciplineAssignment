@@ -83,6 +83,9 @@ void print_tac(TAC *tac) {
             case TAC_VAR_DECL:
                 printf("VAR %s\n", tac->result);
                 break;
+            case TAC_PRINT:
+                printf("PRINT %s\n", tac->result);
+                break;
             default:
                 printf("UNKNOWN_TAC_OP\n");
                 break;
@@ -251,6 +254,11 @@ TAC *generate_tac(ASTNode *node) {
             right_tac = generate_tac(node->left); // Expressão de retorno
             temp_result = right_tac ? right_tac->result : node->left->value; // Se for um número ou ID direto
             tac_list = concat_tac(right_tac, create_tac(TAC_RETURN, NULL, NULL, temp_result));
+            break;
+        case NODE_PRINT:
+            right_tac = generate_tac(node->left); // Expressão a ser impressa
+            temp_result = right_tac ? right_tac->result : node->left->value; // Se for um número ou ID direto
+            tac_list = concat_tac(right_tac, create_tac(TAC_PRINT, NULL, NULL, temp_result));
             break;
         default:
             // Para outros nós, apenas concatena o TAC dos filhos

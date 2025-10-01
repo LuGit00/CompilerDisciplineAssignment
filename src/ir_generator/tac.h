@@ -20,7 +20,8 @@ typedef enum {
     TAC_RETURN,
     TAC_CALL,
     TAC_PARAM,
-    TAC_VAR_DECL
+    TAC_VAR_DECL,
+    TAC_PRINT
 } TACOp;
 
 typedef struct TAC {
