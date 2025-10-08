@@ -9,3 +9,7 @@ void main(void)
 {
 	puts("Hello World!");
 }
+
+%macro asm 1
+	%1
+%endmacro

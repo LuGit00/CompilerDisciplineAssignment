@@ -80,7 +80,7 @@ function main
 		while
 			load node
 		do
-			lib.print_int ; node->value
+			execute lib.print_int ; node->value
 			load ; node->next
 			assign node
 		end

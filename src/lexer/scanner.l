@@ -31,13 +31,13 @@ extern YYSTYPE yylval;
 "<="        { return LE; }
 ">="        { return GE; }
 
-"("         { return LPAREN; }
+"("         { return LPARAWEN; }
 ")"         { return RPAREN; }
 "{"         { return LBRACE; }
 "}"         { return RBRACE; }
 ";"         { return SEMICOLON; }
 
-[ \t\n]+    { /* Ignorar espaços em branco */ }
+[ \t\n\r]+    { /* Ignorar espaços em branco */ }
 "//".*      { /* Ignorar comentários de linha única */ }
 "/*"([^*]|\*+[^*/])*\*+"/" { /* Ignorar comentários de múltiplas linhas */ }
 
