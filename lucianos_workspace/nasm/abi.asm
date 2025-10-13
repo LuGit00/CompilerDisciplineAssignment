@@ -1,74 +1,30 @@
-
-;
-;%macro include 1-*
-;	%ifnctx global
-;		%fatal
-;	%endif
-;	%rep %0
-;		%include %1
-;		%rotate 1
-;	%endrep
-;%endmacro
-;%macro namespace 1-*
-;	%push %??
-;	%xdefine %$access_type private
-;	%rotate 1
-;	%rep %0
-;		;
-;		%rotate 1
-;	%endrep
-;%endmacro
-;%macro public 0
-;	%ifnctx namespace
-;		%fatal 
-;	%endif
-;	%xdefine %$access_type %??
-;%endmacro
-;%macro protected 0
-;	%ifnctx namespace
-;		%fatal
-;	%endif
-;	%xdefine %$access_type %??
-;%endmacro
-;%macro private 0
-;	%ifnctx namespace
-;		%fatal
-;	%endif
-;	%xdefine %$access_type %??
-;%endmacro
-;%macro static 0
-;	%ifctx struct
-;		%fatal
-;	%endif
-;%endmacro
-
-
-
-
 ; scopes: global, function, struct
-%push global
 
-var 3, a, b, c
 
-struct gisdhkh
-	var 8, dsjfbusydg
-	var 1, ufgisdgf
-end
-
-function fdsfkhs
-	var 8, hfbksdhjf
-	var 7, khvsfjkhd
-end
 
 %macro function 1-*
-	%ifctx struct
-		%fatal
-	%elifctx function
+	%ifnctx global
 		%fatal
 	%endif
 
 	%push %??
-	[section .text]
+	%assign %$stack.variables.count 0
+	%assign %$stack.total 0
+	%assign %$frame.base %[%rsp]
+	%1:
+	section .text
+%endmacro
+
+%macro execute 1-*
+	%ifnctx function
+		%fatal
+	%endif
+
+	lea rax, %%return_address
+    mov [rbp+rsp], rax
+    add rsp, 8
+    jmp %1
+%%return_address:
 %endmacro
 
 %macro return 0
@@ -76,7 +32,9 @@ end
 		%fatal
 	%endif
 
-	ret
+	sub rsp, 8
+    mov rax, [rbp+rsp]
+    jmp rax
 %endmacro
 
 %macro label 1-*
@@ -106,25 +64,30 @@ end
 	mov rax, %1
 %endmacro
 
-%macro var 1-*
+%macro var 2-*
+	%assign size %1
+	%rotate 1
 	%ifctx global
-		%rep %0
-			[section .data]
-			%1: times
+		%rep %0 - 1
+			section .bss
+			%1: resb %[size]
 			%rotate 1
 		%endrep
 	%elifctx function
-		%rep %0
+		%rep %0 - 1
+			%assign %$stack.variables.count %$stack.variables.count + %[size]
+			%xdefine %1 [rsp - %$stack.variables.count]
 			%rotate 1
 		%endrep
 	%elifctx struct
-		%rep %0
-			.resq %1
+		%rep %0 - 1
+			.%1 resb %[size] 
 			%rotate 1
 		%endrep
 	%else
 		%fatal
-	%endrep
+	%endif
+	%undef size
 %endmacro
 
 %macro struct 1
@@ -134,6 +97,7 @@ end
 %endmacro
 
 %macro assign 1
+	mov qword [%1], rax
 %endmacro
 %macro add 1
 	add rax, %1
@@ -168,10 +132,6 @@ end
 	cmp rax, %1
 %endmacro
 
-a->b.c->d
-immediate b.c->d->e->f
-assign g;
-
 %macro if 0
 	%push function
 %endmacro
@@ -179,26 +139,26 @@ assign g;
 	%pop
 	%push function
 %endmacro
-%macro elif 0
-	%pop
-	%push function
-%endmacro
 %macro else 0
 	%pop
 	%push function
 %endmacro
-%macro while 0
-	%push function
-%endmacro
-%macro do 0
-	%push function
-%endmacro
-%macro end 0-*
+
+%macro end 0
+	%ifctx function
+	%elifctx struct
+		endstruc
+	%else
+		%fatal
+	%endif
 	%pop
 %endmacro
+
 %macro asm 1-*
 	%rep %0
 		%1
 		%rotate 1
 	%endrep
 %endmacro
+
+%push global
