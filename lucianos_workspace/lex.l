@@ -8,7 +8,7 @@
 %option yylineno
 %%
 include { return INCLUDE; }
-namespace { return NAMESPACE; }
+struct { return STRUCT; }
 public { return PUBLIC; }
 protected { return PROTECTED; }
 private { return PRIVATE; }
@@ -19,7 +19,6 @@ goto { return GOTO; }
 block { return BLOCK; }
 immediate { return IMMEDIATE; }
 var { return VAR; }
-struct { return STRUCT; }
 assign { return ASSIGN; }
 add { return ADD; }
 subtract { return SUBTRACT; }
@@ -42,7 +41,7 @@ asm { return ASM; }
 \'([^\'\\]|\\.)*\' { yylval.sval=strdup(yytext); return STRING; }
 \"([^\"\\]|\\.)*\" { yylval.sval=strdup(yytext); return STRING; }
 [0-9]+ { yylval.ival=strtoll(yytext,NULL,10); return INTEGER; }
-[A-Za-z._:/\\][0-9A-Za-z._:/\\-]* { yylval.sval=strdup(yytext); return IDENTIFIER; }
+[A-Za-z._][0-9A-Za-z._]* { yylval.sval=strdup(yytext); return IDENTIFIER; }
 , { return SEPARATOR; }
 . ;
-%% 
+%%

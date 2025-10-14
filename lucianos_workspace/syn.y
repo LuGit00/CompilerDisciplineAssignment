@@ -16,18 +16,17 @@ void yyerror(const char *s);
 
 %%
 
-global_statement:
-	VAR IDENTIFIER { printf("Parsed a declaration for variable: %s\n", $2); free($2); }
-	;
+<integer> ::= digit ( empty | <integer> )
+<identifier> ::= ( lower | upper | '_' | '.' ) ( empty | <identifier> )
+<string_chars> ::= ( empty | '\' ''' | '\' '"' | any_except_quotes ) ( empty | <string_chars> )
+<string> ::= '"' <string_chars> '"'
 
-global_statements:
-	global_statement
-	| global_statement global_statements
-	;
+::= <identifier> | <string> | <integer>
 
-program: 
-	global_statements
-	;
+<variable_definition_parameters> ::= <identifier> ( empty | ',' <variable_definition_parameters> )
+<variable_definition> ::= ( empty | 'static' ) 'var' <integer> ',' <variable_definition_parameters>
+<definition> ::= <variable_definition> | <structure_definition> | <function_definition>
+<program> ::= <definition> ( empty | <program> )
 
 %%
 

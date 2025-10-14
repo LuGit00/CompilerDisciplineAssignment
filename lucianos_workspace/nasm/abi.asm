@@ -18,45 +18,47 @@ xor rsp,rsp
 %endmacro
 
 %macro execute 1-*
-	%ifnctx function
-		%fatal
-	%endif
-	lea rax,[rel %%ret%=]
-	%assign __argc %0-1
-	%if __argc > 0
-		%assign __i 2
-		%rep __argc
-			mov rdx,%[%__i]
-			mov [rbp+rsp],rdx
-			add rsp,8
-			%assign __i __i+1
-		%endrep
-	%endif
-	mov [rbp+rsp],r12
-	add rsp,8
-	mov [rbp+rsp],rax
-	add rsp,8
-	%if __argc > 0
-		lea rsi,[rbp+rsp-16-8*__argc]
-		mov rdi,__argc
-	%else
-		lea rsi,[rbp+rsp-16]
-		xor rdi,rdi
-	%endif
-	jmp %1
-%%ret%=:
+    %ifnctx function
+        %fatal
+    %endif
+    LEA RAX,[REL %%RET%=]
+    %assign __argc %0-1
+    %if __argc > 0
+        %assign __i 2
+        %rep __argc
+            MOV RDX,%[%__i]
+            MOV [RBP+RSP],RDX
+            ADD RSP,8
+            %assign __i __i+1
+        %endrep
+    %endif
+    MOV [RBP+RSP],R12
+    ADD RSP,8
+    MOV [RBP+RSP],RAX
+    ADD RSP,8
+    %if __argc > 0
+        LEA RSI,[RBP+RSP-16-8*__argc]
+        MOV RDI,__argc
+    %else
+        LEA RSI,[RBP+RSP-16]
+        XOR RDI,RDI
+    %endif
+    JMP %1
+%%RET%=:
 %endmacro
 
 
+
+
 %macro return 0
-	%ifnctx function
-		%fatal
-	%endif
-	sub rsp,8
-	mov rax, [rbp+rsp]
-	sub rsp,8
-	mov r12,[rbp+rsp]
-	jmp rax
+    %ifnctx function
+        %fatal
+    %endif
+    SUB RSP,8
+    MOV RAX,[RBP+RSP]
+    SUB RSP,8
+    MOV R12,[RBP+RSP]
+    JMP RAX
 %endmacro
 
 %macro label 1-*
@@ -84,29 +86,29 @@ xor rsp,rsp
 %endmacro
 
 %macro var 2-*
-	%assign size %1
-	%rotate 1
-	%ifctx global
-		%rep %0 - 1
-			section .bss
-			%1: resb %[size]
-			%rotate 1
-		%endrep
-	%elifctx function
-		%rep %0 - 1
-			%assign %$stack.variables.count %$stack.variables.count + %[size]
-			%xdefine %1 [rbp+r12+%$stack.variables.count-%[size]]
-			%rotate 1
-		%endrep
-	%elifctx struct
-		%rep %0 - 1
-			.%1 resb %[size]
-			%rotate 1
-		%endrep
-	%else
-		%fatal
-	%endif
-	%undef size
+    %assign size %1
+    %rotate 1
+    %ifctx global
+        %rep %0 - 1
+            section .bss
+            %1: resb %[size]
+            %rotate 1
+        %endrep
+    %elifctx function
+        %rep %0 - 1
+            %assign %$stack.variables.count %$stack.variables.count + %[size]
+            %xdefine %1 [rbp+r12+%$stack.variables.count-%[size]]
+            %rotate 1
+        %endrep
+    %elifctx struct
+        %rep %0 - 1
+            .%1 resb %[size]
+            %rotate 1
+        %endrep
+    %else
+        %fatal
+    %endif
+    %undef size
 %endmacro
 
 %macro struct 1
@@ -192,8 +194,8 @@ xor rsp,rsp
 %endmacro
 
 %macro asm 1-*
-	%rep %0
-		%1
-		%rotate 1
-	%endrep
+	%1
 %endmacro
+
+
+
