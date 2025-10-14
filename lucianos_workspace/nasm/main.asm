@@ -1,5 +1,6 @@
 %include "abi.asm"
 
+<<<<<<< Updated upstream
 ; globals
 var 8, heap_next
 var 4096, heap
@@ -90,3 +91,112 @@ label loop
 label done
     return
 end
+=======
+%macro label 1
+%endmacro
+
+%macro goto 1
+%endmacro
+
+%macro call 1
+%endmacro
+
+%macro return 0
+%endmacro
+
+
+
+%include "abi.asm"
+
+
+
+
+
+
+;include io, lib
+;namespace simple_list
+;private
+;	namespace list_node
+;	private
+;		struct list_node
+;			var value, next
+;		end
+;	public
+;		function create, value
+;			sizeof list_node
+;			execute malloc
+;			var self
+;			assign self
+;			immediate value
+;			assign ; self->value
+;			immediate 0
+;			assign ; self->next
+;			return self
+;		end
+;	end
+;	struct simple_list
+;		var head, tail
+;	end
+;public
+;	function create
+;		sizeof simple_list
+;		execute malloc
+;		var self
+;		assign self
+;		immediate 0
+;		assign ; self->head
+;		immediate 0
+;		assign ; self->tail
+;		return self
+;	end
+;	function append, self, value
+;		execute list_node.create
+;		var node
+;		assign node
+;		immediate value
+;		assign ; node->value
+;		if
+;			immediate ; self->tail
+;		then
+;			immediate node
+;			assign ; self->tail->next
+;		else
+;			immediate node
+;			assign ; self->head
+;		end
+;		immediate node
+;		assign ; self->tail
+;	end
+;end
+;function main
+;	execute simple_list.create
+;	var list0
+;	assign list0
+;	block
+;		var index
+;		immediate 0
+;		assign index
+;		while
+;			immediate index
+;			less_than 100
+;		do
+;			execute simple_list.append list0, index
+;			immediate index
+;			add 1
+;			assign index
+;		end
+;	end
+;	block
+;		var node
+;		immediate ; list0->head
+;		assign node
+;		while
+;			immediate node
+;		do
+;			execute lib.print_int ; node->value
+;			immediate ; node->next
+;			assign node
+;		end
+;	end
+;end
+>>>>>>> Stashed changes

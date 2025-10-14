@@ -5,6 +5,7 @@ section .text
 lea rbp,[rel vstack]
 xor rsp,rsp
 
+<<<<<<< Updated upstream
 %macro function 1-*
 	%ifnctx global
 		%fatal
@@ -196,6 +197,52 @@ xor rsp,rsp
 %macro asm 1-*
 	%1
 %endmacro
+=======
+%macro include 1-*
+%endmacro
+
+%macro struct 1
+%endmacro
+
+%macro namespace 1
+%endmacro
+
+%macro public 0
+%endmacro
+
+%macro protected 0
+%endmacro
+
+%macro private 0
+%endmacro
+
+%macro function 1-*
+%endmacro
+
+%macro execute 1-*
+%endmacro
+
+%macro return 1
+%endmacro
+
+%macro label 1-*
+%endmacro
+
+%macro goto 1
+%endmacro
+
+%macro block 0
+%endmacro
+
+%macro var 1-*
+%endmacro
+
+%macro end 0
+%endmacro
+
+%elifndef pass.1
+%xdefine pass.1
+>>>>>>> Stashed changes
 
 
 
