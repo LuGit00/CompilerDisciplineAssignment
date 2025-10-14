@@ -2,7 +2,7 @@ CC      = gcc
 FLEX    = flex
 BISON   = bison
 CFLAGS  = -Wall -Wextra -g -Iparser -Isemantic -Iir_generator
-LDFLAGS = -lfl
+LDFLAGS =
 
 # Diretórios
 LEXER_DIR   = lexer
@@ -28,7 +28,7 @@ OBJS = \
 all: $(TARGET)
 
 $(PARSER_DIR)/parser.tab.c $(PARSER_DIR)/parser.tab.h: $(PARSER_DIR)/parser.y
-	$(BISON) -d -v -Wcounterexamples -o $(PARSER_DIR)/parser.tab.c $(PARSER_DIR)/parser.y
+	$(BISON) -d -v -o $(PARSER_DIR)/parser.tab.c $(PARSER_DIR)/parser.y
 
 $(LEXER_DIR)/lex.yy.c: $(LEXER_DIR)/scanner.l $(PARSER_DIR)/parser.tab.h
 	$(FLEX) -o $(LEXER_DIR)/lex.yy.c $(LEXER_DIR)/scanner.l

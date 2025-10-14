@@ -75,6 +75,7 @@ void print_ast(ASTNode *node, int indent) {
         case NODE_TYPE_INT: printf("TYPE: INT\n"); break;
         case NODE_TYPE_FLOAT: printf("TYPE: FLOAT\n"); break;
         case NODE_BLOCK: printf("BLOCK\n"); break;
+        case NODE_PRINT: printf("PRINT\n"); break;
         default: printf("UNKNOWN_NODE_TYPE\n"); break;
     }
 

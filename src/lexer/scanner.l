@@ -15,6 +15,7 @@ extern YYSTYPE yylval;
 "else"      { return ELSE; }
 "while"     { return WHILE; }
 "return"    { return RETURN; }
+"print"     { return PRINT; }
 
 [a-zA-Z_][a-zA-Z0-9_]* { yylval.sval = strdup(yytext); return ID; }
 [0-9]+\.?[0-9]*([Ee][+-]?[0-9]+)? { yylval.sval = strdup(yytext); return NUMBER; }

@@ -66,11 +66,11 @@ void check_assignment_type(ASTNode *id_node, ASTNode *expr_node) {
 
 %token <sval> ID
 %token <sval> NUMBER
-%token INT FLOAT IF ELSE WHILE RETURN
+%token INT FLOAT IF ELSE WHILE RETURN PRINT
 %token ASSIGN ADD SUB MUL DIV EQ NE LT GT LE GE
 %token LPAREN RPAREN LBRACE RBRACE SEMICOLON
 
-%type <node> program function_definition_list function_definition statement_list statement declaration expression assignment_statement while_statement return_statement
+%type <node> program function_definition_list function_definition statement_list statement declaration expression assignment_statement while_statement return_statement print_statement
 %type <node> term factor relational_expression block
 %type <node> matched_statement unmatched_statement
 
@@ -108,10 +108,10 @@ matched_statement:
     declaration SEMICOLON { $$ = $1; }
     | assignment_statement SEMICOLON { $$ = $1; }
     | return_statement SEMICOLON { $$ = $1; }
+    | print_statement SEMICOLON { $$ = $1; }
     | while_statement
     | IF LPAREN relational_expression RPAREN matched_statement ELSE matched_statement { $$ = create_node(NODE_IF_ELSE, $3, $5, $7, NULL); }
     | block { $$ = $1; }
-    ;
 
 unmatched_statement:
     IF LPAREN relational_expression RPAREN statement
@@ -170,6 +170,11 @@ while_statement:
 
 return_statement:
     RETURN expression { $$ = create_node(NODE_RETURN, $2, NULL, NULL, NULL); }
+    ;
+
+print_statement:
+    PRINT LPAREN expression RPAREN { $$ = create_node(NODE_PRINT, $3, NULL, NULL, NULL); }
+    | PRINT LPAREN ID RPAREN { $$ = create_node(NODE_PRINT, create_leaf(NODE_ID, $3), NULL, NULL, NULL); free($3); }
     ;
 
 %%

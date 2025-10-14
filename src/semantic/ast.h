@@ -25,7 +25,8 @@ typedef enum {
     NODE_NUMBER,
     NODE_TYPE_INT,
     NODE_TYPE_FLOAT,
-    NODE_BLOCK // Adicionado
+    NODE_BLOCK, // Adicionado
+    NODE_PRINT
 } ASTNodeType;
 
 typedef struct ASTNode {
