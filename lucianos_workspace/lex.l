@@ -8,18 +8,27 @@
 %option yylineno
 %%
 include { return INCLUDE; }
+
 struct { return STRUCT; }
+
 public { return PUBLIC; }
 protected { return PROTECTED; }
 private { return PRIVATE; }
+
 function { return FUNCTION; }
+
+block { return BLOCK; }
+
 return { return RETURN; }
+
 label { return LABEL; }
 goto { return GOTO; }
-block { return BLOCK; }
+
 immediate { return IMMEDIATE; }
 var { return VAR; }
+
 assign { return ASSIGN; }
+
 add { return ADD; }
 subtract { return SUBTRACT; }
 multiply { return MULTIPLY; }
@@ -30,14 +39,19 @@ if_less_or_equal_than { return IF_LESS_OR_EQUAL_THAN; }
 if_more_or_equal_than { return IF_MORE_OR_EQUAL_THAN; }
 if_equals { return IF_EQUALS; }
 if_not_equals { return IF_NOT_EQUALS; }
+
 if { return IF; }
 then { return THEN; }
 elif { return ELIF; }
 else { return ELSE; }
+
 while { return WHILE; }
 do { return DO; }
+
 end { return END; }
+
 asm { return ASM; }
+
 \'([^\'\\]|\\.)*\' { yylval.sval=strdup(yytext); return STRING; }
 \"([^\"\\]|\\.)*\" { yylval.sval=strdup(yytext); return STRING; }
 [0-9]+ { yylval.ival=strtoll(yytext,NULL,10); return INTEGER; }
