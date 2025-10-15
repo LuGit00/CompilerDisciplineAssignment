@@ -23,6 +23,7 @@ void yyerror(const char *s);
 
 ::= <identifier> | <string> | <integer>
 
+<structure_definition> ::= 'struct' 
 <variable_definition_parameters> ::= <identifier> ( empty | ',' <variable_definition_parameters> )
 <variable_definition> ::= ( empty | 'static' ) 'var' <integer> ',' <variable_definition_parameters>
 <definition> ::= <variable_definition> | <structure_definition> | <function_definition>
