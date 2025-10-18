@@ -1,4 +1,5 @@
 %include "abi.asm"
 
-function _start
+function main
+    
 end

@@ -19,7 +19,7 @@ void yyerror(const char *s);
 <integer> ::= digit ( empty | <integer> )
 <identifier> ::= ( lower | upper | '_' | '.' ) ( empty | <identifier> )
 <string_chars> ::= ( empty | '\' ''' | '\' '"' | any_except_quotes ) ( empty | <string_chars> )
-<string> ::= '"' <string_chars> '"'
+<string> ::= '\"' <string_chars> '"'
 
 ::= <identifier> | <string> | <integer>
 
@@ -40,4 +40,14 @@ int main(void)
 	printf("Enter a variable declaration (e.g., var my_var ;)...\n");
 	yyparse();
 	return 0;
+}
+
+
+
+
+
+struct label
+{
+	uint8_t *name;
+	
 }
