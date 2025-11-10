@@ -1,39 +1,44 @@
 CC      = gcc
 FLEX    = flex
 BISON   = bison
-CFLAGS  = -Wall -Wextra -g -Iparser -Isemantic -Iir_generator
+CFLAGS  = -Wall -Wextra -g -Isrc -Isrc/parser -Isrc/semantic -Isrc/ir_generator
 LDFLAGS =
-
-# Diretórios
-LEXER_DIR   = lexer
-PARSER_DIR  = parser
-SEMANTIC_DIR= semantic
-IR_DIR      = ir_generator
 
 TARGET = compiler
 
 # Gerados por Bison/Flex
-GEN_C = $(PARSER_DIR)/parser.tab.c $(LEXER_DIR)/lex.yy.c
-GEN_H = $(PARSER_DIR)/parser.tab.h
+GEN_C = src/parser.tab.c src/lex.yy.c
+GEN_H = src/parser.tab.h
 
 # Objetos
 OBJS = \
-  $(PARSER_DIR)/parser.tab.o \
-  $(LEXER_DIR)/lex.yy.o \
-  $(SEMANTIC_DIR)/ast.o \
-  $(SEMANTIC_DIR)/symbol_table.o \
-  $(IR_DIR)/tac.o \
+  src/parser.tab.o \
+  src/lex.yy.o \
+  src/semantic/ast.o \
+  src/semantic/symbol_table.o \
   main.o
 
 all: $(TARGET)
 
-$(PARSER_DIR)/parser.tab.c $(PARSER_DIR)/parser.tab.h: $(PARSER_DIR)/parser.y
-	$(BISON) -d -v -o $(PARSER_DIR)/parser.tab.c $(PARSER_DIR)/parser.y
+src/parser.tab.c src/parser.tab.h: src/parser.y
+	$(BISON) -d -v -o src/parser.tab.c src/parser.y
 
-$(LEXER_DIR)/lex.yy.c: $(LEXER_DIR)/scanner.l $(PARSER_DIR)/parser.tab.h
-	$(FLEX) -o $(LEXER_DIR)/lex.yy.c $(LEXER_DIR)/scanner.l
+src/lex.yy.c: src/scanner.l src/parser.tab.h
+	$(FLEX) -o src/lex.yy.c src/scanner.l
 
 %.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+src/parser.tab.o: src/parser.tab.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+src/lex.yy.o: src/lex.yy.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+src/semantic/ast.o: src/semantic/ast.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+src/semantic/symbol_table.o: src/semantic/symbol_table.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(TARGET): $(OBJS)
@@ -41,9 +46,9 @@ $(TARGET): $(OBJS)
 
 .PHONY: clean test
 clean:
-	rm -f $(TARGET) $(OBJS) $(GEN_C) $(GEN_H) *.output
+	rm -f $(TARGET) $(OBJS) $(GEN_C) $(GEN_H) *.output src/parser.tab.c src/parser.tab.h src/lex.yy.c src/parser.tab.output
 
 # Roda o compilador nos exemplos
 test: all
-	@./$(TARGET) ../tests/examples/valid_program.c || true
-	@./$(TARGET) ../tests/examples/syntax_error.c || true
+	@./$(TARGET) tests/examples/valid_program.c || true
+	@./$(TARGET) tests/examples/syntax_error.c || true

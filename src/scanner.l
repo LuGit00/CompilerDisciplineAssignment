@@ -1,8 +1,8 @@
 %{
 #include <stdio.h>
 #include <string.h>
-#include "../semantic/ast.h" // Inclui a definição de ASTNode
-#include "../parser/parser.tab.h" // Inclui os tokens e a união yylval
+#include "semantic/ast.h" // Inclui a definição de ASTNode
+#include "parser.tab.h" // Inclui os tokens e a união yylval
 
 // Declaração externa para yylval
 extern YYSTYPE yylval;
@@ -32,7 +32,7 @@ extern YYSTYPE yylval;
 "<="        { return LE; }
 ">="        { return GE; }
 
-"("         { return LPARAWEN; }
+"("         { return LPAREN; }
 ")"         { return RPAREN; }
 "{"         { return LBRACE; }
 "}"         { return RBRACE; }
