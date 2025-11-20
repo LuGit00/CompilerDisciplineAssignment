@@ -1,1870 +1,741 @@
-%macro system.registers.arguments.initialize 1-*
-	%assign system.registers.arguments.count %0
-	%assign counter 0
+;scopes: global, struct, function, block
+;function parameters: rdi, rsi, rdx, rcx, r8, r9
+
+%macro _ASSERT_IF_NOT_IN_SCOPE 1-*
 	%rep %0
-		%xdefine system.registers.arguments.%[counter] %1
+		%ifctx %1
+			%fatal
+		%endif
 		%rotate 1
-		%assign counter %[counter] + 1
 	%endrep
 %endmacro
-system.registers.arguments.initialize rdi, rsi, rdx, rcx, r8, r9
-
-;scopes: global, function, block, struct
-
-%macro register 0
-	%ifctx global
-		%fatal
-	%elifctx function
-	%elifctx block
-	%elifctx struct
-		%fatal
-	%else
-		%fatal
-	%endif
-	%ifdef %$storage_class
-		%fatal
-	%endif
-	%xdefine %$storage_class
-	%xdefine %$storage_class.identifier %??
-%endmacro
-%macro auto 0
-	%ifctx global
-		%fatal
-	%elifctx function
-	%elifctx block
-	%elifctx struct
-		%fatal
-	%else
-		%fatal
-	%endif
-	%ifdef %$storage_class
-		%fatal
-	%endif
-	%xdefine %$storage_class
-	%xdefine %$storage_class.identifier %??
-%endmacro
-%macro static 0
-	%ifctx global
-	%elifctx function
-	%elifctx block
-	%elifctx struct
-		%fatal
-	%else
-		%fatal
-	%endif
-
-	%ifdef %$storage_class
-		%fatal
-	%endif
-	%xdefine %$storage_class
-	%xdefine %$storage_class.identifier %??
-%endmacro
-
-%macro var 1
-	%ifctx global
-	%elifctx function
-	%elifctx block
-	%elifctx struct
-	%else
-		%fatal
-	%endif
-	array 1, %1
-%endmacro
-
-%macro array 2
-	%ifctx global
-	%elifctx function
-	%elifctx block
-	%elifctx struct
-	%else
-		%fatal
-	%endif
-	%assign counter 0
-	%rep %[%$variables.count]
-		%ifidni %[%$variables.%[counter].identifier], %2
-			%fatal
-		%endif
-		%assign counter %[counter] + 1
-	%endrep
-	%xdefine %$variables.%[%$variables.count]
-	%xdefine %$variables.%[%$variables.count].identifier %2
-	%ifidni %[%$storage_class], register
-		%if %[%$variables.callee_saved_register.count] == 0
-			%xdefine %$variables.%[%$variables.count].value rbx
-			section .text.%[%$functions.%[%$functions.count].id]
-		%elif %[%$variables.callee_saved_register.count] == 1
-			%xdefine %$variables.%[%$variables.count].value r12
-			section .text.%[%$functions.%[%$functions.count].id]
-		%elif %[%$variables.callee_saved_register.count] == 2
-			%xdefine %$variables.%[%$variables.count].value r13
-			section .text.%[%$functions.%[%$functions.count].id]
-		%elif %[%$variables.callee_saved_register.count] == 3
-			%xdefine %$variables.%[%$variables.count].value r14
-			section .text.%[%$functions.%[%$functions.count].id]
-		%elif %[%$variables.callee_saved_register.count] == 4
-			%xdefine %$variables.%[%$variables.count].value r15
-		%else
-			%fatal
-		%endif
-		section .text.%[%$functions.%[%$functions.count].id]
-		push %[%$variables.%[%$variables.count].value]
-		%assign %$variables.callee_saved_register.count %[%$variables.callee_saved_register.count] + 1
-	%elifidni %[%$storage_class], auto
-		%xdefine %$variables.%[%$variables.count].identifier %2
-		%assign %$variables.auto.offset %[%$variables.auto.offset] + (8 * %1)
-		section .text.%[%$functions.%[%$functions.count].id]
-		sub rsp, 8 * %1
-		%xdefine %$variables.%[%$variables.count].value qword [rbp-%[%$variables.auto.offset]]
-	%elifidni %[%$storage_class], static
-		section .bss
-		%%address: resq %1
-		%xdefine %$variables.%[%$variables.count].value qword [%%address]
-	%else
-		%fatal
-	%endif
-	%assign %$variables.count %[%$variables.count] + 1
-	%undef %$storage_class
-%endmacro
-
-%macro label 1
-	%ifctx global
-		%fatal
-	%elifctx function
-	%elifctx block
-	%elifctx struct
-		%fatal
-	%else
-		%fatal
-	%endif
-	%assign counter 0
-	%rep %[%$labels.count]
-		%ifidni %[%$labels.%[counter].identifier], %1
-			%fatal
-		%endif
-		%assign counter %[counter] + 1
-	%endrep
-	%xdefine %$labels.%[%$labels.count]
-	%xdefine %$labels.%[%$labels.count].identifier %1
-	section .text.%[%$functions.%[%$functions.count].id]
-	%1:
-	%xdefine %$labels.%[%$labels.count].value %[%1]
-	%assign %$labels.count %[%$labels.count] + 1
-%endmacro
-%macro goto 1
-	%ifctx global
-		%fatal
-	%elifctx function
-	%elifctx block
-	%elifctx struct
-		%fatal
-	%else
-		%fatal
-	%endif
+%macro _IF_IN_SCOPE 1-*
 	%undef if_found
-	%assign counter 0
-	%rep %[%$labels.count]
-		%ifidni %[%$labels.%[counter].identifier], %1
+	%rep %0
+		%ifctx %1
 			%xdefine if_found
 			%exitrep
 		%endif
-		%assign counter %[counter] + 1
+		%rotate 1
 	%endrep
-	%ifndef if_found
+	%ifdef if_found
+%endmacro
+
+%macro _ASSERT_IF_NOT_STATIC 0
+	%ifdef %$if_static
 		%fatal
 	%endif
-	section .text.%[%$functions.%[%$functions.count].id]
-	jmp %[%$labels.%[counter].value]
+%endmacro
+%macro _IF_STATIC 0
+	%ifdef %$if_static
+%endmacro
+%macro _IF_STRUCT_STATIC 0
+	%ifdef %$if_struct_static
+%endmacro
+
+%macro _ASSERT_IF_INTEGER 1
+	%ifnnum %1
+		%fatal
+	%endif
+%endmacro
+%macro _IF_INTEGER 1
+	%ifnum %1
+%endmacro
+%macro _ASSERT_IF_STRING 1
+	%ifnstr %1
+		%fatal
+	%endif
+%endmacro
+%macro _IF_STRING 1
+	%ifstr %1
+%endmacro
+%macro _ASSERT_IF_IDENTIFIER 1
+	%ifnid %1
+		%fatal
+	%endif
+%endmacro
+%macro _IF_IDENTIFIER 1
+	%ifid %1
+%endmacro
+
+%macro _ELSE 0
+	%else
+%endmacro
+%macro _ENDIF 0
+	%endif
+%endmacro
+
+%macro _FETCH_REPRESENTATION 3
+	%undef if_found
+	%assign buffer0 %[%$%1.count] - 1
+	%rep %[%$%1.count]
+		%ifidni %[%$%1.%[buffer0].identifier], %3
+			%xdefine if_found
+			%exitrep
+		%endif
+		%assign buffer0 %[buffer0] - 1
+	%endrep
+	%ifdef if_found
+		%xdefine %2 %[%$%1.%[buffer0].representation]
+	%else
+		%fatal
+	%endif
+%endmacro
+%macro _APPEND_SYMBOL 3-5
+	_ASSERT_IF_IDENTIFIER %1
+	_ASSERT_IF_IDENTIFIER %2
+	%xdefine %$%1.%[%$%1.count].identifier %2
+	%xdefine %$%1.%[%$%1.count].representation %3
+	%if %0 > 3
+		_ASSERT_IF_IDENTIFIER %4
+		%xdefine %$%1.%[%$%1.count].access_modifier %4
+		_ASSERT_IF_INTEGER %5
+		%xdefine %$%1.%[%$%1.count].struct %5
+	%endif
+	%assign %$%1.count %[%$%1.count] + 1
+%endmacro
+%macro _COPY_SYMBOLS 1
+	%ifidni %1, members
+		%rep %[%$$%1.count]
+			_APPEND_SYMBOL %1, %[%$$%1.%[%$%1.count].identifier], %[%$$%1.%[%$%1.count].representation], %[%$$members.%[%$members.count].access_modifier], %[%$$members.%[%$members.count].struct]
+		%endrep
+	%else
+		%rep %[%$$%1.count]
+			_APPEND_SYMBOL %1, %[%$$%1.%[%$%1.count].identifier], %[%$$%1.%[%$%1.count].representation]
+		%endrep
+	%endif
+%endmacro
+
+%macro _OPEN_SCOPE 3
+	%push %1
+	%assign %$arrays.count 0
+	%assign %$structs.count 0
+	%assign %$members.count 0
+	%assign %$functions.count 0
+	%assign %$base_pointer %2
+	%assign %$labels.count 0
+	%assign %$struct_id %3
+	%xdefine %$access_modifier private
+%endmacro
+%macro _CLOSE_SCOPE 0
+	%pop
+%endmacro
+
+_OPEN_SCOPE global, 0, 0
+
+%macro static 0
+	_ASSERT_IF_NOT_IN_SCOPE struct
+	_ASSERT_IF_NOT_STATIC
+	%xdefine %$if_static
+%endmacro
+
+%macro array 2
+	_ASSERT_IF_IDENTIFIER %1
+	_ASSERT_IF_INTEGER %2
+	_IF_IN_SCOPE global
+		section .bss
+		%%address: resb %2
+		_APPEND_SYMBOL arrays, %1, %[%%address]
+		_IF_STATIC
+			%undef %$if_static
+			%xdefine %$if_struct_static
+		_ELSE
+			global %[%%address]
+		_ENDIF
+	_ENDIF
+	_IF_IN_SCOPE struct
+		_ASSERT_IF_NOT_STATIC
+		_APPEND_SYMBOL members, %1, %[%$structs.%[%$structs.count].representation] + %2, %[%$access_modifier], %[%$struct_id]
+	_ENDIF
+	_IF_IN_SCOPE function, block
+		_IF_STATIC
+			%undef %$if_static
+			%xdefine %$if_struct_static
+			section .bss
+			%%address: resb %2
+			section %[%$section]
+			_APPEND_SYMBOL arrays, %1, %[%%address]
+		_ELSE
+			%assign %$base_pointer %[%$base_pointer] + %2
+			_APPEND_SYMBOL arrays, %1, [rsp-%[%$base_pointer]]
+		_ENDIF
+	_ENDIF
+%endmacro
+
+%macro struct 1-*
+	_ASSERT_IF_IDENTIFIER %1
+	; TODO
+	_APPEND_SYMBOL structs, %1, 0
+	_OPEN_SCOPE %??, %[%$$base_pointer], %[%$structs.count]
+	_COPY_SYMBOLS arrays
+	_COPY_SYMBOLS structs
+	_COPY_SYMBOLS members
+	_COPY_SYMBOLS functions
+%endmacro
+%macro public 0
+	_ASSERT_IF_NOT_IN_SCOPE global, function, block
+	_ASSERT_IF_NOT_STATIC
+	%xdefine %$access_modifier %??
+%endmacro
+%macro protected 0
+	_ASSERT_IF_NOT_IN_SCOPE global, function, block
+	_ASSERT_IF_NOT_STATIC
+	%xdefine %$access_modifier %??
+%endmacro
+%macro private 0
+	_ASSERT_IF_NOT_IN_SCOPE global, function, block
+	_ASSERT_IF_NOT_STATIC
+	%xdefine %$access_modifier %??
+%endmacro
+
+%macro function 1-*
+	_IF_IN_SCOPE global
+		_IF_STATIC
+			_ASSERT_IF_IDENTIFIER %1
+			; TODO
+			%xdefine %$section .text.%[%$functions.count]
+			section %[%$section]
+			%%address:
+			_APPEND_SYMBOL functions, %1, %[%%address]
+			push rbp
+			mov rbp, rsp
+			_OPEN_SCOPE %??, %[%$base_pointer], %[%$struct_id]
+			_COPY_SYMBOLS arrays
+			_COPY_SYMBOLS structs
+			_COPY_SYMBOLS members
+			_COPY_SYMBOLS functions
+		_ELSE
+			_ASSERT_IF_IDENTIFIER %1
+			; TODO
+			%xdefine %$section .text.%[%$functions.count]
+			section %[%$section]
+			%%address:
+			_APPEND_SYMBOL functions, %1, %[%%address]
+			push rbp
+			mov rbp, rsp
+			_OPEN_SCOPE %??, %[%$base_pointer], %[%$struct_id]
+			_COPY_SYMBOLS arrays
+			_COPY_SYMBOLS structs
+			_COPY_SYMBOLS members
+			_COPY_SYMBOLS functions
+			global %[%%address]
+		_ENDIF
+	_ENDIF
+	_IF_IN_SCOPE struct
+		_ASSERT_IF_NOT_STATIC
+		_ASSERT_IF_IDENTIFIER %1
+		; TODO
+		%xdefine %$section .text.%[%$functions.count]
+		section %[%$section]
+		%%address:
+		_APPEND_SYMBOL functions, %1, %[%%address]
+		_APPEND_SYMBOL members, %1, %[%%address], %[%$access_modifier], %[%$struct_id]
+		push rbp
+		mov rbp, rsp
+		_OPEN_SCOPE %??, %[%$base_pointer], %[%$struct_id]
+		_COPY_SYMBOLS arrays
+		_COPY_SYMBOLS structs
+		_COPY_SYMBOLS members
+		_COPY_SYMBOLS functions
+	_ENDIF
+	_IF_IN_SCOPE function, block
+		_ASSERT_IF_IDENTIFIER %1
+		; TODO
+		%xdefine %$section .text.%[%$functions.count]
+		section %[%$section]
+		%%address:
+		_APPEND_SYMBOL functions, %1, %[%%address]
+		_APPEND_SYMBOL members, %1, %[%%address], %[%$access_modifier], %[%$struct_id]
+		push rbp
+		mov rbp, rsp
+		_OPEN_SCOPE %??, %[%$base_pointer], %[%$struct_id]
+		_COPY_SYMBOLS arrays
+		_COPY_SYMBOLS structs
+		_COPY_SYMBOLS members
+		_COPY_SYMBOLS functions
+	_ENDIF
+%endmacro
+
+%macro execute 1-*
+	_ASSERT_IF_NOT_IN_SCOPE global, struct
+	_ASSERT_IF_NOT_STATIC
+	_ASSERT_IF_IDENTIFIER %1
+	%assign buffer0 %[%$functions.count] - 1
+	%undef if_found
+	%rep %[%$functions.count]
+		%ifidni %[%$functions.%[buffer0].identifier], %1
+			%xdefine if_found
+			%exitrep
+		%endif
+		%assign buffer0 %[buffer0] - 1
+	%endrep
+	%ifdef if_found
+		%rotate 1
+		%assign buffer1 0
+		%rep %0 - 1
+			%if %[buffer1] == 0
+				mov rdi, %1
+			%elif %[buffer1] == 1
+				mov rsi, %1
+			%elif %[buffer1] == 2
+				mov rdx, %1
+			%elif %[buffer1] == 3
+				mov rcx, %1
+			%elif %[buffer1] == 4
+				mov r8, %1
+			%elif %[buffer1] == 5
+				mov r9, %1
+			%endif
+			%assign buffer1 %[buffer1] + 1
+			%rotate 1
+		%endrep
+		call %[%$functions.%[buffer0].representation]
+	%else
+		%fatal
+	%endif
+%endmacro
+%macro return 0-1
+	_ASSERT_IF_NOT_IN_SCOPE global, struct
+	_ASSERT_IF_NOT_STATIC
+	%if %0 == 0
+		ret
+	%else
+		_IF_INTEGER %1
+	        mov rax, %1
+	    _ENDIF
+	    _IF_STRING %1
+	        %%address: db %1, 0
+	        mov rax, %[%%address]
+	    _ENDIF
+	    _IF_IDENTIFIER %1
+	        _FETCH_REPRESENTATION arrays, op0, %1
+	        mov rax, op0
+	    _ENDIF
+	    ret
+	%endif
+%endmacro
+
+%macro label 1
+	_ASSERT_IF_NOT_IN_SCOPE global, struct
+	_ASSERT_IF_NOT_STATIC
+	_ASSERT_IF_IDENTIFIER %1
+	%%address:
+	_APPEND_SYMBOL labels, %1, %[%%address]
+%endmacro
+%macro goto 1
+	_ASSERT_IF_NOT_IN_SCOPE global, struct
+	_ASSERT_IF_NOT_STATIC
+	_ASSERT_IF_IDENTIFIER %1
+	%assign buffer0 %[%$labels.count] - 1
+	%undef if_found
+	%rep %[%$labels.count]
+		%ifidni %[%$labels.%[buffer0].identifier], %1
+			%xdefine if_found
+			%exitrep
+		%endif
+		%assign buffer0 %[buffer0] - 1
+	%endrep
+	%ifdef if_found
+		jmp %[%$labels.%[buffer0].representation]
+	%else
+		%fatal
+	%endif
 %endmacro
 
 %macro block 0
-	%ifctx global
-		%fatal
-	%elifctx function
-	%elifctx block
-	%elifctx struct
-		%fatal
-	%else
-		%fatal
-	%endif
-	%push %??
-	section .text.%[%$functions.%[%$functions.count].id]
-	push rbp
-	mov rbp, rsp
-	%assign %$functions.count 0
-	%rep %[%$$functions.count]
-		%xdefine %$functions.%[%$functions.count].identifier %[%$$functions.%[%$functions.count].identifier]
-		%xdefine %$functions.%[%$functions.count].value      %[%$$functions.%[%$functions.count].value]
-		%xdefine %$functions.%[%$functions.count].id         %[%$$functions.%[%$functions.count].id]
-		%assign %$functions.count %[%$functions.count] + 1
-	%endrep
-	%assign %$variables.count 0
-	%rep %[%$$variables.count]
-		%xdefine %$variables.%[%$variables.count].identifier %[%$$variables.%[%$variables.count].identifier]
-		%xdefine %$variables.%[%$variables.count].value      %[%$$variables.%[%$variables.count].value]
-		%assign %$variables.count %[%$variables.count] + 1
-	%endrep
-	%assign %$variables.callee_saved_register.count %[%$$variables.callee_saved_register.count]
-	%assign %$variables.auto.offset %[%$$variables.auto.offset]
-	%assign %$labels.count 0
-	%rep %[%$$labels.count]
-		%xdefine %$labels.%[%$labels.count].identifier %[%$$labels.%[%$labels.count].identifier]
-		%xdefine %$labels.%[%$labels.count].value      %[%$$labels.%[%$labels.count].value]
-		%assign %$labels.count %[%$labels.count] + 1
-	%endrep
-	%assign %$callee_saved.entry %[%$variables.callee_saved_register.count]
+	_ASSERT_IF_NOT_IN_SCOPE global, struct
+	_ASSERT_IF_NOT_STATIC
+	_OPEN_SCOPE %??, %[%$base_pointer], %[%$struct_id]
+	_COPY_SYMBOLS arrays
+	_COPY_SYMBOLS structs
+	_COPY_SYMBOLS members
+	_COPY_SYMBOLS functions
+	_COPY_SYMBOLS labels
 %endmacro
 
 %macro if 1
-	%ifctx global
-		%fatal
-	%elifctx function
-	%elifctx block
-	%elifctx struct
-		%fatal
-	%else
-		%fatal
-	%endif
+	_ASSERT_IF_NOT_IN_SCOPE global, struct
+	_ASSERT_IF_NOT_STATIC
 	block
-	section .text.%[%$functions.%[%$functions.count].id]
 	cmp %1, 0
 	jz %$if_not
 %endmacro
 %macro elif 1
-	%ifctx global
-		%fatal
-	%elifctx function
-	%elifctx block
-	%elifctx struct
-		%fatal
-	%else
-		%fatal
-	%endif
+	_ASSERT_IF_NOT_IN_SCOPE global, struct
+	_ASSERT_IF_NOT_STATIC
 	%$if_not:
 	end
 	block
-	section .text.%[%$functions.%[%$functions.count].id]
-	test %1, %1
-	jnz %$if_not
+	cmp %1, 0
+	jz %$if_not
 %endmacro
 %macro else 0
-	%ifctx global
-		%fatal
-	%elifctx function
-	%elifctx block
-	%elifctx struct
-		%fatal
-	%else
-		%fatal
-	%endif
+	_ASSERT_IF_NOT_IN_SCOPE global, struct
+	_ASSERT_IF_NOT_STATIC
 	%$if_not:
 	end
-	block
 %endmacro
 
 %macro assign 2
-	%ifctx global
-		%fatal
-	%elifctx function
-	%elifctx block
-	%elifctx struct
-		%fatal
-	%else
-		%fatal
-	%endif
-	%ifnum %1
-		%fatal
-	%elifstr %1
-		%fatal
-	%elifid %1
-		%undef if_found
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %1
-				%xdefine if_found
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found
-			%fatal
-		%endif
-		%xdefine destination %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-	%ifnum %2
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov %[destination], %2
-	%elifstr %2
-		section .rodata
-		%%address: db %2, 0
-		section .text.%[%$functions.%[%$functions.count].id]
-		lea rax, [rel %%address]
-		mov %[destination], rax
-	%elifid %2
-		%undef if_found
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %2
-				%xdefine if_found
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found
-			%fatal
-		%endif
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov %[destination], %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
+    _ASSERT_IF_NOT_IN_SCOPE global, struct
+    _ASSERT_IF_NOT_STATIC
+    _ASSERT_IF_IDENTIFIER %1
+    _FETCH_REPRESENTATION arrays, op0, %1
+    _IF_INTEGER %2
+        mov op0, %2
+    _ENDIF
+    _IF_STRING %2
+        %%address: db %2, 0
+        mov op0, %[%%address]
+    _ENDIF
+    _IF_IDENTIFIER %2
+        _FETCH_REPRESENTATION arrays, op1, %2
+        mov op0, op1
+    _ENDIF
 %endmacro
-%macro add 3
-	%ifctx global
-		%fatal
-	%elifctx function
-	%elifctx block
-	%elifctx struct
-		%fatal
-	%else
-		%fatal
-	%endif
-	%ifnum %1
-		%fatal
-	%elifstr %1
-		%fatal
-	%elifid %1
-		%undef if_found
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %1
-				%xdefine if_found
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found
-			%fatal
-		%endif
-		%xdefine destination %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-	%ifnum %2
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov %[destination], %2
-	%elifstr %2
-		section .rodata
-		%%address_add: db %2, 0
-		section .text.%[%$functions.%[%$functions.count].id]
-		lea rax, [rel %%address_add]
-		mov %[destination], rax
-	%elifid %2
-		%undef if_found
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %2
-				%xdefine if_found
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found
-			%fatal
-		%endif
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov %[destination], %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-	%ifnum %3
-		section .text.%[%$functions.%[%$functions.count].id]
-		add %[destination], %3
-	%elifstr %3
-		%fatal
-	%elifid %3
-		%undef if_found
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %3
-				%xdefine if_found
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found
-			%fatal
-		%endif
-		section .text.%[%$functions.%[%$functions.count].id]
-		add %[destination], %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
+%macro assign_add 3
+    _ASSERT_IF_NOT_IN_SCOPE global, struct
+    _ASSERT_IF_NOT_STATIC
+    _ASSERT_IF_IDENTIFIER %1
+    _FETCH_REPRESENTATION arrays, op0, %1
+    _IF_INTEGER %2
+        add op0, %2
+    _ENDIF
+    _IF_STRING %2
+        %%address: db %2, 0
+        add op0, %[%%address]
+    _ENDIF
+    _IF_IDENTIFIER %2
+        _FETCH_REPRESENTATION arrays, op1, %2
+        add op0, op1
+    _ENDIF
 %endmacro
-%macro subtract 3
-	%ifctx global
-		%fatal
-	%elifctx function
-	%elifctx block
-	%elifctx struct
-		%fatal
-	%else
-		%fatal
-	%endif
-	%ifnum %1
-		%fatal
-	%elifstr %1
-		%fatal
-	%elifid %1
-		%undef if_found
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %1
-				%xdefine if_found
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found
-			%fatal
-		%endif
-		%xdefine destination %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-	%ifnum %2
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov %[destination], %2
-	%elifstr %2
-		section .rodata
-		%%address_sub: db %2, 0
-		section .text.%[%$functions.%[%$functions.count].id]
-		lea rax, [rel %%address_sub]
-		mov %[destination], rax
-	%elifid %2
-		%undef if_found
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %2
-				%xdefine if_found
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found
-			%fatal
-		%endif
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov %[destination], %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-	%ifnum %3
-		section .text.%[%$functions.%[%$functions.count].id]
-		sub %[destination], %3
-	%elifstr %3
-		%fatal
-	%elifid %3
-		%undef if_found
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %3
-				%xdefine if_found
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found
-			%fatal
-		%endif
-		section .text.%[%$functions.%[%$functions.count].id]
-		sub %[destination], %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
+%macro assign_subtract 3
+    _ASSERT_IF_NOT_IN_SCOPE global, struct
+    _ASSERT_IF_NOT_STATIC
+    _ASSERT_IF_IDENTIFIER %1
+    _FETCH_REPRESENTATION arrays, op0, %1
+    _IF_INTEGER %2
+        sub op0, %2
+    _ENDIF
+    _IF_STRING %2
+        %%address: db %2, 0
+        sub op0, %[%%address]
+    _ENDIF
+    _IF_IDENTIFIER %2
+        _FETCH_REPRESENTATION arrays, op1, %2
+        sub op0, op1
+    _ENDIF
 %endmacro
-%macro multiply 3
-	%ifctx global
-		%fatal
-	%elifctx function
-	%elifctx block
-	%elifctx struct
-		%fatal
-	%else
-		%fatal
-	%endif
-	%ifnum %1
-		%fatal
-	%elifstr %1
-		%fatal
-	%elifid %1
-		%undef if_found
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %1
-				%xdefine if_found
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found
-			%fatal
-		%endif
-		%xdefine destination %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-	%ifnum %2
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov %[destination], %2
-	%elifstr %2
-		section .rodata
-		%%address_mul: db %2, 0
-		section .text.%[%$functions.%[%$functions.count].id]
-		lea rax, [rel %%address_mul]
-		mov %[destination], rax
-	%elifid %2
-		%undef if_found
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %2
-				%xdefine if_found
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found
-			%fatal
-		%endif
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov %[destination], %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-	%ifnum %3
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov rax, %[destination]
-		imul rax, %3
-		mov %[destination], rax
-	%elifstr %3
-		%fatal
-	%elifid %3
-		%undef if_found
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %3
-				%xdefine if_found
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found
-			%fatal
-		%endif
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov rax, %[destination]
-		imul rax, %[%$variables.%[counter].value]
-		mov %[destination], rax
-	%else
-		%fatal
-	%endif
+%macro assign_multiply 3
+    _ASSERT_IF_NOT_IN_SCOPE global, struct
+    _ASSERT_IF_NOT_STATIC
+    _ASSERT_IF_IDENTIFIER %1
+    _FETCH_REPRESENTATION arrays, op0, %1
+    _IF_INTEGER %2
+        imul op0, %2
+    _ENDIF
+    _IF_STRING %2
+        %%address: db %2, 0
+    _ENDIF
+    _IF_IDENTIFIER %2
+        _FETCH_REPRESENTATION arrays, op1, %2
+        imul op0, op1
+    _ENDIF
 %endmacro
-
-%macro divide 3
-	%ifctx global
-		%fatal
-	%elifctx function
-	%elifctx block
-	%elifctx struct
-		%fatal
-	%else
-		%fatal
-	%endif
-	%ifnum %1
-		%fatal
-	%elifstr %1
-		%fatal
-	%elifid %1
-		%undef if_found
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %1
-				%xdefine if_found
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found
-			%fatal
-		%endif
-		%xdefine destination %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-	%ifnum %2
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov %[destination], %2
-	%elifstr %2
-		section .rodata
-		%%address_div: db %2, 0
-		section .text.%[%$functions.%[%$functions.count].id]
-		lea rax, [rel %%address_div]
-		mov %[destination], rax
-	%elifid %2
-		%undef if_found
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %2
-				%xdefine if_found
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found
-			%fatal
-		%endif
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov %[destination], %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-	%ifnum %3
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov rax, %[destination]
-		cqo
-		mov rcx, %3
-		idiv rcx
-		mov %[destination], rax
-	%elifstr %3
-		%fatal
-	%elifid %3
-		%undef if_found
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %3
-				%xdefine if_found
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found
-			%fatal
-		%endif
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov rax, %[destination]
-		cqo
-		mov rcx, %[%$variables.%[counter].value]
-		idiv rcx
-		mov %[destination], rax
-	%else
-		%fatal
-	%endif
+;%macro assign_divide 3
+;    _ASSERT_IF_NOT_IN_SCOPE global, struct
+;    _ASSERT_IF_NOT_STATIC
+;    _ASSERT_IF_IDENTIFIER %1
+;    _FETCH_REPRESENTATION arrays, op0, %1
+;    _IF_INTEGER %2
+;    _ENDIF
+;    _IF_STRING %2
+;        %%address: db %2, 0
+;    _ENDIF
+;    _IF_IDENTIFIER %2
+;        _FETCH_REPRESENTATION arrays, op1, %2
+;    _ENDIF
+;%endmacro
+;%macro assign_modulo 3
+;    _ASSERT_IF_NOT_IN_SCOPE global, struct
+;    _ASSERT_IF_NOT_STATIC
+;    _ASSERT_IF_IDENTIFIER %1
+;    _FETCH_REPRESENTATION arrays, op0, %1
+;    _IF_INTEGER %2
+;    _ENDIF
+;    _IF_STRING %2
+;        %%address: db %2, 0
+;    _ENDIF
+;    _IF_IDENTIFIER %2
+;        _FETCH_REPRESENTATION arrays, op1, %2
+;    _ENDIF
+;%endmacro
+%macro assign_if_less_than 3
+	_ASSERT_IF_NOT_IN_SCOPE global, struct
+	_ASSERT_IF_NOT_STATIC
+	_ASSERT_IF_IDENTIFIER %1
+	_FETCH_REPRESENTATION arrays, op0, %1
+	mov r10, 0
+	_IF_INTEGER %2
+		mov rax, %2
+	_ENDIF
+	_IF_STRING %2
+		%%address2: db %2, 0
+		mov rax, %[%%address2]
+	_ENDIF
+	_IF_IDENTIFIER %2
+		_FETCH_REPRESENTATION arrays, op1, %2
+		mov rax, op1
+	_ENDIF
+	_IF_INTEGER %3
+		mov rbx, %3
+	_ENDIF
+	_IF_STRING %3
+		%%address3: db %3, 0
+		mov rbx, %[%%address3]
+	_ENDIF
+	_IF_IDENTIFIER %3
+		_FETCH_REPRESENTATION arrays, op2, %3
+		mov rbx, op2
+	_ENDIF
+	cmp rax, rbx
+	setl r10b
+	movzx r10, r10b
+	mov op0, r10
 %endmacro
-%macro modulo 3
-	%ifctx global
-		%fatal
-	%elifctx function
-	%elifctx block
-	%elifctx struct
-		%fatal
-	%else
-		%fatal
-	%endif
-	%ifnum %1
-		%fatal
-	%elifstr %1
-		%fatal
-	%elifid %1
-		%undef if_found
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %1
-				%xdefine if_found
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found
-			%fatal
-		%endif
-		%xdefine destination %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-	%ifnum %2
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov %[destination], %2
-	%elifstr %2
-		section .rodata
-		%%address_mod: db %2, 0
-		section .text.%[%$functions.%[%$functions.count].id]
-		lea rax, [rel %%address_mod]
-		mov %[destination], rax
-	%elifid %2
-		%undef if_found
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %2
-				%xdefine if_found
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found
-			%fatal
-		%endif
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov %[destination], %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-	%ifnum %3
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov rax, %[destination]
-		cqo
-		mov rcx, %3
-		idiv rcx
-		mov %[destination], rdx
-	%elifstr %3
-		%fatal
-	%elifid %3
-		%undef if_found
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %3
-				%xdefine if_found
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found
-			%fatal
-		%endif
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov rax, %[destination]
-		cqo
-		mov rcx, %[%$variables.%[counter].value]
-		idiv rcx
-		mov %[destination], rdx
-	%else
-		%fatal
-	%endif
+%macro assign_if_more_than 3
+	_ASSERT_IF_NOT_IN_SCOPE global, struct
+	_ASSERT_IF_NOT_STATIC
+	_ASSERT_IF_IDENTIFIER %1
+	_FETCH_REPRESENTATION arrays, op0, %1
+	mov r10, 0
+	_IF_INTEGER %2
+		mov rax, %2
+	_ENDIF
+	_IF_STRING %2
+		%%address2: db %2, 0
+		mov rax, %[%%address2]
+	_ENDIF
+	_IF_IDENTIFIER %2
+		_FETCH_REPRESENTATION arrays, op1, %2
+		mov rax, op1
+	_ENDIF
+	_IF_INTEGER %3
+		mov rbx, %3
+	_ENDIF
+	_IF_STRING %3
+		%%address3: db %3, 0
+		mov rbx, %[%%address3]
+	_ENDIF
+	_IF_IDENTIFIER %3
+		_FETCH_REPRESENTATION arrays, op2, %3
+		mov rbx, op2
+	_ENDIF
+	cmp rax, rbx
+	setg r10b
+	movzx r10, r10b
+	mov op0, r10
 %endmacro
-%macro bit_shift_left 3
-	%ifctx global
-		%fatal
-	%elifctx function
-	%elifctx block
-	%elifctx struct
-		%fatal
-	%else
-		%fatal
-	%endif
-	%ifnum %1
-		%fatal
-	%elifstr %1
-		%fatal
-	%elifid %1
-		%undef if_found
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %1
-				%xdefine if_found
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found
-			%fatal
-		%endif
-		%xdefine destination %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-	%ifnum %2
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov %[destination], %2
-	%elifstr %2
-		section .rodata
-		%%address_shl: db %2, 0
-		section .text.%[%$functions.%[%$functions.count].id]
-		lea rax, [rel %%address_shl]
-		mov %[destination], rax
-	%elifid %2
-		%undef if_found
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %2
-				%xdefine if_found
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found
-			%fatal
-		%endif
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov %[destination], %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-	%ifnum %3
-		section .text.%[%$functions.%[%$functions.count].id]
-		shl %[destination], %3
-	%elifstr %3
-		%fatal
-	%elifid %3
-		%undef if_found
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %3
-				%xdefine if_found
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found
-			%fatal
-		%endif
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov rcx, %[%$variables.%[counter].value]
-		shl %[destination], cl
-	%else
-		%fatal
-	%endif
+%macro assign_if_less_or_equal_than 3
+	_ASSERT_IF_NOT_IN_SCOPE global, struct
+	_ASSERT_IF_NOT_STATIC
+	_ASSERT_IF_IDENTIFIER %1
+	_FETCH_REPRESENTATION arrays, op0, %1
+	mov r10, 0
+	_IF_INTEGER %2
+		mov rax, %2
+	_ENDIF
+	_IF_STRING %2
+		%%address2: db %2, 0
+		mov rax, %[%%address2]
+	_ENDIF
+	_IF_IDENTIFIER %2
+		_FETCH_REPRESENTATION arrays, op1, %2
+		mov rax, op1
+	_ENDIF
+	_IF_INTEGER %3
+		mov rbx, %3
+	_ENDIF
+	_IF_STRING %3
+		%%address3: db %3, 0
+		mov rbx, %[%%address3]
+	_ENDIF
+	_IF_IDENTIFIER %3
+		_FETCH_REPRESENTATION arrays, op2, %3
+		mov rbx, op2
+	_ENDIF
+	cmp rax, rbx
+	setle r10b
+	movzx r10, r10b
+	mov op0, r10
 %endmacro
-%macro bit_shift_right 3
-	%ifctx global
-		%fatal
-	%elifctx function
-	%elifctx block
-	%elifctx struct
-		%fatal
-	%else
-		%fatal
-	%endif
-	%ifnum %1
-		%fatal
-	%elifstr %1
-		%fatal
-	%elifid %1
-		%undef if_found
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %1
-				%xdefine if_found
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found
-			%fatal
-		%endif
-		%xdefine destination %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-	%ifnum %2
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov %[destination], %2
-	%elifstr %2
-		section .rodata
-		%%address_shr: db %2, 0
-		section .text.%[%$functions.%[%$functions.count].id]
-		lea rax, [rel %%address_shr]
-		mov %[destination], rax
-	%elifid %2
-		%undef if_found
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %2
-				%xdefine if_found
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found
-			%fatal
-		%endif
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov %[destination], %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-	%ifnum %3
-		section .text.%[%$functions.%[%$functions.count].id]
-		shr %[destination], %3
-	%elifstr %3
-		%fatal
-	%elifid %3
-		%undef if_found
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %3
-				%xdefine if_found
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found
-			%fatal
-		%endif
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov rcx, %[%$variables.%[counter].value]
-		shr %[destination], cl
-	%else
-		%fatal
-	%endif
+%macro assign_if_more_or_equal_than 3
+	_ASSERT_IF_NOT_IN_SCOPE global, struct
+	_ASSERT_IF_NOT_STATIC
+	_ASSERT_IF_IDENTIFIER %1
+	_FETCH_REPRESENTATION arrays, op0, %1
+	mov r10, 0
+	_IF_INTEGER %2
+		mov rax, %2
+	_ENDIF
+	_IF_STRING %2
+		%%address2: db %2, 0
+		mov rax, %[%%address2]
+	_ENDIF
+	_IF_IDENTIFIER %2
+		_FETCH_REPRESENTATION arrays, op1, %2
+		mov rax, op1
+	_ENDIF
+	_IF_INTEGER %3
+		mov rbx, %3
+	_ENDIF
+	_IF_STRING %3
+		%%address3: db %3, 0
+		mov rbx, %[%%address3]
+	_ENDIF
+	_IF_IDENTIFIER %3
+		_FETCH_REPRESENTATION arrays, op2, %3
+		mov rbx, op2
+	_ENDIF
+	cmp rax, rbx
+	setge r10b
+	movzx r10, r10b
+	mov op0, r10
 %endmacro
-%macro not 2
-	%ifctx global
-		%fatal
-	%elifctx function
-	%elifctx block
-	%elifctx struct
-		%fatal
-	%else
-		%fatal
-	%endif
-	%ifnum %1
-		%fatal
-	%elifstr %1
-		%fatal
-	%elifid %1
-		%undef if_found
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %1
-				%xdefine if_found
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found
-			%fatal
-		%endif
-		%xdefine destination %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-	%ifnum %2
-		section .text.%[%$functions.%[%$functions.count].id]
-		neg %[destination]
-	%elifstr %2
-		%fatal
-	%elifid %2
-		section .text.%[%$functions.%[%$functions.count].id]
-		not %[destination]
-	%else
-		%fatal
-	%endif
+%macro assign_if_equal 3
+	_ASSERT_IF_NOT_IN_SCOPE global, struct
+	_ASSERT_IF_NOT_STATIC
+	_ASSERT_IF_IDENTIFIER %1
+	_FETCH_REPRESENTATION arrays, op0, %1
+	mov r10, 0
+	_IF_INTEGER %2
+		mov rax, %2
+	_ENDIF
+	_IF_STRING %2
+		%%address2: db %2, 0
+		mov rax, %[%%address2]
+	_ENDIF
+	_IF_IDENTIFIER %2
+		_FETCH_REPRESENTATION arrays, op1, %2
+		mov rax, op1
+	_ENDIF
+	_IF_INTEGER %3
+		mov rbx, %3
+	_ENDIF
+	_IF_STRING %3
+		%%address3: db %3, 0
+		mov rbx, %[%%address3]
+	_ENDIF
+		_IF_IDENTIFIER %3
+		_FETCH_REPRESENTATION arrays, op2, %3
+		mov rbx, op2
+	_ENDIF
+	cmp rax, rbx
+	sete r10b
+	movzx r10, r10b
+	mov op0, r10
 %endmacro
-%macro or 3
-	%ifctx global
-		%fatal
-	%elifctx function
-	%elifctx block
-	%elifctx struct
-		%fatal
-	%else
-		%fatal
-	%endif
-	%ifnum %1
-		%fatal
-	%elifstr %1
-		%fatal
-	%elifid %1
-		%undef if_found
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %1
-				%xdefine if_found
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found
-			%fatal
-		%endif
-		%xdefine destination %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-
-	%ifnum %2
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov %[destination], %2
-	%elifstr %2
-		section .rodata
-		%%address_or: db %2, 0
-		section .text.%[%$functions.%[%$functions.count].id]
-		lea rax, [rel %%address_or]
-		mov %[destination], rax
-	%elifid %2
-		%undef if_found
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %2
-				%xdefine if_found
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found
-			%fatal
-		%endif
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov %[destination], %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-
-	%ifnum %3
-		section .text.%[%$functions.%[%$functions.count].id]
-		or %[destination], %3
-	%elifstr %3
-		%fatal
-	%elifid %3
-		%undef if_found
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %3
-				%xdefine if_found
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found
-			%fatal
-		%endif
-		section .text.%[%$functions.%[%$functions.count].id]
-		or %[destination], %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-%endmacro
-%macro and 3
-	%ifctx global
-		%fatal
-	%elifctx function
-	%elifctx block
-	%elifctx struct
-		%fatal
-	%else
-		%fatal
-	%endif
-	%ifnum %1
-		%fatal
-	%elifstr %1
-		%fatal
-	%elifid %1
-		%undef if_found
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %1
-				%xdefine if_found
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found
-			%fatal
-		%endif
-		%xdefine destination %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-	%ifnum %2
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov %[destination], %2
-	%elifstr %2
-		section .rodata
-		%%address_and: db %2, 0
-		section .text.%[%$functions.%[%$functions.count].id]
-		lea rax, [rel %%address_and]
-		mov %[destination], rax
-	%elifid %2
-		%undef if_found
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %2
-				%xdefine if_found
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found
-			%fatal
-		%endif
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov %[destination], %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-	%ifnum %3
-		section .text.%[%$functions.%[%$functions.count].id]
-		and %[destination], %3
-	%elifstr %3
-		%fatal
-	%elifid %3
-		%undef if_found
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %3
-				%xdefine if_found
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found
-			%fatal
-		%endif
-		section .text.%[%$functions.%[%$functions.count].id]
-		and %[destination], %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-%endmacro
-%macro xor 3
-	%ifctx global
-		%fatal
-	%elifctx function
-	%elifctx block
-	%elifctx struct
-		%fatal
-	%else
-		%fatal
-	%endif
-	%ifnum %1
-		%fatal
-	%elifstr %1
-		%fatal
-	%elifid %1
-		%undef if_found
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %1
-				%xdefine if_found
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found
-			%fatal
-		%endif
-		%xdefine destination %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-	%ifnum %2
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov %[destination], %2
-	%elifstr %2
-		section .rodata
-		%%address_xor: db %2, 0
-		section .text.%[%$functions.%[%$functions.count].id]
-		lea rax, [rel %%address_xor]
-		mov %[destination], rax
-	%elifid %2
-		%undef if_found
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %2
-				%xdefine if_found
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found
-			%fatal
-		%endif
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov %[destination], %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-	%ifnum %3
-		section .text.%[%$functions.%[%$functions.count].id]
-		xor %[destination], %3
-	%elifstr %3
-		%fatal
-	%elifid %3
-		%undef if_found
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %3
-				%xdefine if_found
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found
-			%fatal
-		%endif
-		section .text.%[%$functions.%[%$functions.count].id]
-		xor %[destination], %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-%endmacro
-%macro if_less_than 3
-	%ifctx global
-		%fatal
-	%elifctx function
-	%elifctx block
-	%elifctx struct
-		%fatal
-	%else
-		%fatal
-	%endif
-	%ifnum %1
-		%fatal
-	%elifstr %1
-		%fatal
-	%elifid %1
-		%undef if_found
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %1
-				%xdefine if_found
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found
-			%fatal
-		%endif
-		%xdefine destination %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-	%ifnum %2
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov %[destination], %2
-	%elifstr %2
-		section .rodata
-		%%addr_lt_op2: db %2, 0
-		section .text.%[%$functions.%[%$functions.count].id]
-		lea rax, [rel %%addr_lt_op2]
-		mov %[destination], rax
-	%elifid %2
-		%undef if_found2
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %2
-				%xdefine if_found2
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found2
-			%fatal
-		%endif
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov %[destination], %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-	%ifnum %3
-		section .text.%[%$functions.%[%$functions.count].id]
-		cmp %[destination], %3
-	%elifstr %3
-		%fatal
-	%elifid %3
-		%undef if_found3
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %3
-				%xdefine if_found3
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found3
-			%fatal
-		%endif
-		section .text.%[%$functions.%[%$functions.count].id]
-		cmp %[destination], %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-	section .text.%[%$functions.%[%$functions.count].id]
-	setl al
-	movzx rax, al
-	mov %[destination], rax
-%endmacro
-%macro if_more_than 3
-	%ifctx global
-		%fatal
-	%elifctx function
-	%elifctx block
-	%elifctx struct
-		%fatal
-	%else
-		%fatal
-	%endif
-	%ifnum %1
-		%fatal
-	%elifstr %1
-		%fatal
-	%elifid %1
-		%undef if_found
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %1
-				%xdefine if_found
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found
-			%fatal
-		%endif
-		%xdefine destination %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-	%ifnum %2
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov %[destination], %2
-	%elifstr %2
-		section .rodata
-		%%addr_gt_op2: db %2, 0
-		section .text.%[%$functions.%[%$functions.count].id]
-		lea rax, [rel %%addr_gt_op2]
-		mov %[destination], rax
-	%elifid %2
-		%undef if_found2
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %2
-				%xdefine if_found2
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found2
-			%fatal
-		%endif
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov %[destination], %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-	%ifnum %3
-		section .text.%[%$functions.%[%$functions.count].id]
-		cmp %[destination], %3
-	%elifstr %3
-		%fatal
-	%elifid %3
-		%undef if_found3
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %3
-				%xdefine if_found3
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found3
-			%fatal
-		%endif
-		section .text.%[%$functions.%[%$functions.count].id]
-		cmp %[destination], %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-	section .text.%[%$functions.%[%$functions.count].id]
-	setg al
-	movzx rax, al
-	mov %[destination], rax
-%endmacro
-%macro if_less_or_equal_than 3
-	%ifctx global
-		%fatal
-	%elifctx function
-	%elifctx block
-	%elifctx struct
-		%fatal
-	%else
-		%fatal
-	%endif
-	%ifnum %1
-		%fatal
-	%elifstr %1
-		%fatal
-	%elifid %1
-		%undef if_found
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %1
-				%xdefine if_found
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found
-			%fatal
-		%endif
-		%xdefine destination %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-	%ifnum %2
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov %[destination], %2
-	%elifstr %2
-		section .rodata
-		%%addr_le_op2: db %2, 0
-		section .text.%[%$functions.%[%$functions.count].id]
-		lea rax, [rel %%addr_le_op2]
-		mov %[destination], rax
-	%elifid %2
-		%undef if_found2
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %2
-				%xdefine if_found2
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found2
-			%fatal
-		%endif
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov %[destination], %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-	%ifnum %3
-		section .text.%[%$functions.%[%$functions.count].id]
-		cmp %[destination], %3
-	%elifstr %3
-		%fatal
-	%elifid %3
-		%undef if_found3
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %3
-				%xdefine if_found3
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found3
-			%fatal
-		%endif
-		section .text.%[%$functions.%[%$functions.count].id]
-		cmp %[destination], %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-	section .text.%[%$functions.%[%$functions.count].id]
-	setle al
-	movzx rax, al
-	mov %[destination], rax
-%endmacro
-%macro if_more_or_equal_than 3
-	%ifctx global
-		%fatal
-	%elifctx function
-	%elifctx block
-	%elifctx struct
-		%fatal
-	%else
-		%fatal
-	%endif
-	%ifnum %1
-		%fatal
-	%elifstr %1
-		%fatal
-	%elifid %1
-		%undef if_found
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %1
-				%xdefine if_found
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found
-			%fatal
-		%endif
-		%xdefine destination %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-	%ifnum %2
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov %[destination], %2
-	%elifstr %2
-		section .rodata
-		%%addr_ge_op2: db %2, 0
-		section .text.%[%$functions.%[%$functions.count].id]
-		lea rax, [rel %%addr_ge_op2]
-		mov %[destination], rax
-	%elifid %2
-		%undef if_found2
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %2
-				%xdefine if_found2
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found2
-			%fatal
-		%endif
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov %[destination], %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-	%ifnum %3
-		section .text.%[%$functions.%[%$functions.count].id]
-		cmp %[destination], %3
-	%elifstr %3
-		%fatal
-	%elifid %3
-		%undef if_found3
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %3
-				%xdefine if_found3
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found3
-			%fatal
-		%endif
-		section .text.%[%$functions.%[%$functions.count].id]
-		cmp %[destination], %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-	section .text.%[%$functions.%[%$functions.count].id]
-	setge al
-	movzx rax, al
-	mov %[destination], rax
-%endmacro
-%macro if_equal 3
-	%ifctx global
-		%fatal
-	%elifctx function
-	%elifctx block
-	%elifctx struct
-		%fatal
-	%else
-		%fatal
-	%endif
-	%ifnum %1
-		%fatal
-	%elifstr %1
-		%fatal
-	%elifid %1
-		%undef if_found
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %1
-				%xdefine if_found
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found
-			%fatal
-		%endif
-		%xdefine destination %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-	%ifnum %2
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov %[destination], %2
-	%elifstr %2
-		section .rodata
-		%%addr_eq_op2: db %2, 0
-		section .text.%[%$functions.%[%$functions.count].id]
-		lea rax, [rel %%addr_eq_op2]
-		mov %[destination], rax
-	%elifid %2
-		%undef if_found2
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %2
-				%xdefine if_found2
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found2
-			%fatal
-		%endif
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov %[destination], %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-	%ifnum %3
-		section .text.%[%$functions.%[%$functions.count].id]
-		cmp %[destination], %3
-	%elifstr %3
-		%fatal
-	%elifid %3
-		%undef if_found3
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %3
-				%xdefine if_found3
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found3
-			%fatal
-		%endif
-		section .text.%[%$functions.%[%$functions.count].id]
-		cmp %[destination], %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-	section .text.%[%$functions.%[%$functions.count].id]
-	sete al
-	movzx rax, al
-	mov %[destination], rax
-%endmacro
-%macro if_not_equal 3
-	%ifctx global
-		%fatal
-	%elifctx function
-	%elifctx block
-	%elifctx struct
-		%fatal
-	%else
-		%fatal
-	%endif
-	%ifnum %1
-		%fatal
-	%elifstr %1
-		%fatal
-	%elifid %1
-		%undef if_found
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %1
-				%xdefine if_found
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found
-			%fatal
-		%endif
-		%xdefine destination %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-	%ifnum %2
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov %[destination], %2
-	%elifstr %2
-		section .rodata
-		%%addr_ne_op2: db %2, 0
-		section .text.%[%$functions.%[%$functions.count].id]
-		lea rax, [rel %%addr_ne_op2]
-		mov %[destination], rax
-	%elifid %2
-		%undef if_found2
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %2
-				%xdefine if_found2
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found2
-			%fatal
-		%endif
-		section .text.%[%$functions.%[%$functions.count].id]
-		mov %[destination], %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-	%ifnum %3
-		section .text.%[%$functions.%[%$functions.count].id]
-		cmp %[destination], %3
-	%elifstr %3
-		%fatal
-	%elifid %3
-		%undef if_found3
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %3
-				%xdefine if_found3
-				%exitrep
-			%endif
-			%assign counter %[counter] + 1
-		%endrep
-		%ifndef if_found3
-			%fatal
-		%endif
-		section .text.%[%$functions.%[%$functions.count].id]
-		cmp %[destination], %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-	section .text.%[%$functions.%[%$functions.count].id]
-	setne al
-	movzx rax, al
-	mov %[destination], rax
-%endmacro
-
-%macro function 1
-	%ifctx global
-	%elifctx function
-	%elifctx block
-	%elifctx struct
-	%else
-		%fatal
-	%endif
-	%ifndef functions.count
-		%assign functions.count 0
-	%endif
-	section .text.%[functions.count]
-	%ifctx global
-		%ifndef %$storage_class
-			global %1
-		%endif
-	%endif
-	%1:
-	push rbp
-	mov rbp, rsp
-	%xdefine %$functions.%[%$functions.count].identifier %1
-	%xdefine %$functions.%[%$functions.count].value %[%1]
-	%xdefine %$functions.%[%$functions.count].id %[functions.count]
-	%assign %$functions.count %[%$functions.count] + 1
-	%push %??
-	%assign %$functions.count 0
-	%rep %[%$$functions.count]
-		%xdefine %$functions.%[%$functions.count].identifier %[%$$functions.%[%$functions.count].identifier]
-		%xdefine %$functions.%[%$functions.count].value      %[%$$functions.%[%$functions.count].value]
-		%xdefine %$functions.%[%$functions.count].id         %[%$$functions.%[%$functions.count].id]
-		%assign %$functions.count %[%$functions.count] + 1
-	%endrep
-	%assign %$variables.count 0
-	%rep %[%$$variables.count]
-		%xdefine %$variables.%[%$variables.count].identifier %[%$$variables.%[%$variables.count].identifier]
-		%xdefine %$variables.%[%$variables.count].value      %[%$$variables.%[%$variables.count].value]
-		%assign %$variables.count %[%$variables.count] + 1
-	%endrep
-	%assign %$variables.callee_saved_register.count 0
-	%assign %$variables.auto.offset %[%$$variables.auto.offset]
-	%assign %$labels.count 0
-	%assign %$callee_saved.entry %[%$variables.callee_saved_register.count]
-	%assign functions.count %[functions.count] + 1
+%macro assign_if_not_equal 3
+	_ASSERT_IF_NOT_IN_SCOPE global, struct
+	_ASSERT_IF_NOT_STATIC
+	_ASSERT_IF_IDENTIFIER %1
+	_FETCH_REPRESENTATION arrays, op0, %1
+	mov r10, 0
+	_IF_INTEGER %2
+		mov rax, %2
+	_ENDIF
+	_IF_STRING %2
+		%%address2: db %2, 0
+		mov rax, %[%%address2]
+	_ENDIF
+	_IF_IDENTIFIER %2
+		_FETCH_REPRESENTATION arrays, op1, %2
+		mov rax, op1
+	_ENDIF
+	_IF_INTEGER %3
+		mov rbx, %3
+	_ENDIF
+	_IF_STRING %3
+		%%address3: db %3, 0
+		mov rbx, %[%%address3]
+	_ENDIF
+	_IF_IDENTIFIER %3
+		_FETCH_REPRESENTATION arrays, op2, %3
+		mov rbx, op2
+	_ENDIF
+	cmp rax, rbx
+	setne r10b
+	movzx r10, r10b
+	mov op0, r10
 %endmacro
 
 %macro sizeof 2
-	%ifctx global
-		%fatal
-	%elifctx function
-	%elifctx block
-	%elifctx struct
-		%fatal
-	%else
-		%fatal
-	%endif
-	%ifnum %1
-		%fatal
-	%elifstr %1
-		%fatal
-	%elifid %1
-		%undef if_found
-		%assign counter 0
-		%rep %[%$variables.count]
-			%ifidni %[%$variables.%[counter].identifier], %1
-				%xdefine if_found
-				%exitrep
+	_ASSERT_IF_NOT_IN_SCOPE global, struct
+	_ASSERT_IF_NOT_STATIC
+	_ASSERT_IF_IDENTIFIER %1
+	_FETCH_REPRESENTATION arrays, op0, %1
+	_FETCH_REPRESENTATION structs, op1, %2
+	mov op0, op1
+%endmacro
+
+%macro end 0-*
+	_ASSERT_IF_NOT_IN_SCOPE global
+	_ASSERT_IF_NOT_STATIC
+	_IF_IN_SCOPE struct
+		%assign buffer0 0
+		%assign buffer1 0
+		%rep %[%$members.count]
+			%if %[%$members.%[buffer0].struct] == %[%$struct_id]
+				%ifidni %[%$members.%[buffer0].access_modifier], public
+					%xdefine saved_members.public.%[buffer1].identifier %$%members.%[buffer0].identifier
+					%xdefine saved_members.public.%[buffer1].representation %$%members.%[buffer0].representation
+					%assign buffer1 %[buffer1] + 1
+				%elifidni %[%$members.%[buffer0].access_modifier], protected
+
+					%assign buffer1 %[buffer1] + 1
+				%endif
 			%endif
-			%assign counter %[counter] + 1
+			%assign buffer0 %[buffer0] + 1
 		%endrep
-		%ifndef if_found
+		%assign size %[%$structs.%[%$structs.count].representation]
+		_CLOSE_SCOPE
+		_IF_STRUCT_STATIC
+			%undef %$if_struct_static
+			%rep %0
+				static array %1, %[size]
+				%assign buffer0 0
+				%rep %[buffer1]
+					_APPEND_SYMBOL members, %1.%[saved_members.public.%[buffer0].identifier], %[saved_members.public.%[buffer0].representation], %[%$access_modifier], %[%$struct_id]
+					%assign buffer0 %[buffer0] + 1
+				%endrep
+				%rotate 1
+			%endrep
+		_ELSE
+			%rep %0
+				array %1, %[size]
+				%assign buffer0 0
+				%rep %[buffer1]
+					_APPEND_SYMBOL members, %1.%[saved_members.public.%[buffer0].identifier], %[saved_members.public.%[buffer0].representation], %[saved_members.public.%[buffer0].access_modifier], %[%$struct_id]
+					%assign buffer0 %[buffer0] + 1
+				%endrep
+				%rotate 1
+			%endrep
+		_ENDIF
+	_ENDIF
+	_IF_IN_SCOPE function
+		ret
+		_CLOSE_SCOPE
+		%rep %0
 			%fatal
-		%endif
-		%xdefine destination %[%$variables.%[counter].value]
-	%else
-		%fatal
-	%endif
-	section .text.%[%$functions.%[%$functions.count].id]
-	mov %[destination], 8
-%endmacro
-
-%macro end 0
-	%ifctx global
-		%fatal
-	%elifctx function
-	%elifctx block
-	%elifctx struct
-	%else
-		%fatal
-	%endif
-	%rep %[%$labels.count]
-		%undef %$labels.%[%$labels.count].identifier
-		%undef %$labels.%[%$labels.count].value
-		%assign %$labels.count %[%$labels.count] - 1
-	%endrep
-	%undef %$labels.count
-	%undef %$variables.auto.offset
-	%rep %[%$variables.callee_saved_register.count] - %[%$callee_saved.entry]
-		%assign %$variables.callee_saved_register.count %[%$variables.callee_saved_register.count] - 1
-		%if %[%$variables.callee_saved_register.count] == 0
-			section .text.%[%$functions.%[%$functions.count].id]
-			pop rbx
-		%elif %[%$variables.callee_saved_register.count] == 1
-			section .text.%[%$functions.%[%$functions.count].id]
-			pop r12
-		%elif %[%$variables.callee_saved_register.count] == 2
-			section .text.%[%$functions.%[%$functions.count].id]
-			pop r13
-		%elif %[%$variables.callee_saved_register.count] == 3
-			section .text.%[%$functions.%[%$functions.count].id]
-			pop r14
-		%elif %[%$variables.callee_saved_register.count] == 4
-			section .text.%[%$functions.%[%$functions.count].id]
-			pop r15
-		%else
+		%endrep
+		section %[%$section]
+	_ENDIF
+	_IF_IN_SCOPE block
+		%$if_not:
+		_CLOSE_SCOPE
+		%rep %0
 			%fatal
-		%endif
-	%endrep
-	%undef %$variables.callee_saved_register.count
-	%rep %[%$variables.count]
-		%undef %$variables.%[%$variables.count].identifier
-		%undef %$variables.%[%$variables.count].value
-		%assign %$variables.count %[%$variables.count] - 1
-	%endrep
-	%undef %$variables.count
-	section .text.%[%$functions.%[%$functions.count].id]
-	mov rsp, rbp
-	pop rbp
-	%rep %[%$functions.count]
-		%undef %$functions.%[%$functions.count].id
-		%undef %$functions.%[%$functions.count].value
-		%undef %$functions.%[%$functions.count].identifier
-		%assign %$functions.count %[%$functions.count] - 1
-	%endrep
-	%undef %$functions.count
-	%pop
+		%endrep
+	_ENDIF
 %endmacro
-
-%push global
-%assign %$variables.count 0
-%assign %$variables.callee_saved_register.count 0
-%assign %$variables.auto.offset 0
-%assign %$labels.count 0
-%assign %$functions.count 0
