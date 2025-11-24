@@ -1,6 +1,6 @@
 # Sobre o Projeto
 
- O **Grupo Aureliani** decidiu que irá fazer um compilador que traduz **C para Assembly** utilizando de uma linguagem mínima (subconjunto de C), que deve gerar texto sem precisar linkar/executável. A implementação alvo é a linguagem **C** e as ferramentas base serão **Flex + Bison**. O objetivo do grupo é **criar uma linguagem mínima suficiente para desenvolver código Turing-complete em simplicidade**, como entrega final do trabalho da matéria __Compiladores 01__, ministrada pelo Professor Sérgio Antônio Andrade de Freitas.
+O **Grupo Aureliani** decidiu que irá fazer um compilador que traduz **C para Assembly** utilizando de uma linguagem mínima (subconjunto de C), que deve gerar texto sem precisar linkar/executável. A implementação alvo é a linguagem **C** e as ferramentas base serão **Flex + Bison**. O objetivo do grupo é **criar uma linguagem mínima suficiente para desenvolver código Turing-complete em simplicidade**, como entrega final do trabalho da matéria __Compiladores 01__, ministrada pelo Professor Sérgio Antônio Andrade de Freitas.
 
 # Contribuidores
 
