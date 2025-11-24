@@ -1,0 +1,56 @@
+site_name: Compilador - Aureliani
+site_url: https://mydomain.org/mysite
+markdown_extensions:
+  - admonition
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.superfences
+  - attr_list
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.instant.preview
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+  palette: 
+    # Palette toggle for light mode
+    - scheme: default
+      accent: black
+      primary: black
+      toggle:
+        icon: material/brightness-7 
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - scheme: slate
+      accent: black
+      primary: black
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+nav:
+  - Início: index.md
+  - Visão do Produto e Projeto: 
+    - 1. Cenário Atual do Cliente e do Negócio: visao_prod_proj/cenario_atual.md
+    - 2. Solução Proposta: visao_prod_proj/solucao_proposta.md
+    - 3. Estratégias de Engenharia de Software: visao_prod_proj/estrategias_engenharia.md
+    - 4. Engenharia de Requisitos: visao_prod_proj/engenharia_requisitos.md
+    - 5. Cronograma e Entregas: visao_prod_proj/cronograma_entregas.md
+    - 6. Interação entre Equipe e Cliente: visao_prod_proj/interacao_equipe_cliente.md
+    - 7. Requisitos de Software: visao_prod_proj/requisitos_software.md
+    - 8. DoR e DoD: visao_prod_proj/dor_dod.md
+    - 9. Backlog do Produto: visao_prod_proj/backlog_produto.md
+    - 10. Lições Aprendidas: visao_prod_proj/licoes_aprendidas.md
+    - 11. Bibliografia e Referências Bibliográficas: visao_prod_proj/referencias_bibliograficas.md
+
+  - Sprints:
+    - Sprint 01: 
+
+  - Cronograma:
+    - Concepção - OpenUP: evidencias/concepcao_OpenUP.md
+
