@@ -1,0 +1,683 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://mydomain.org/mysite/Backlog/backlog/">
+      
+      
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.9">
+    
+    
+      
+        <title>Estrutura do Backlog - Compilador - Aureliani</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.4af4bdda.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="black" data-md-color-accent="black">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#estrutura-do-backlog" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Compilador - Aureliani" class="md-header__button md-logo" aria-label="Compilador - Aureliani" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Compilador - Aureliani
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Estrutura do Backlog
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="black" data-md-color-accent="black"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="black"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+    
+  
+  Início
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Compilador - Aureliani" class="md-nav__button md-logo" aria-label="Compilador - Aureliani" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Compilador - Aureliani
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Início
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#epicos" class="md-nav__link">
+    <span class="md-ellipsis">
+      Épicos
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Épicos">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#epico-a-analise-lexica" class="md-nav__link">
+    <span class="md-ellipsis">
+      Épico A - Análise Léxica
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#epico-b-analise-sintatica" class="md-nav__link">
+    <span class="md-ellipsis">
+      Épico B — Análise Sintática
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#epico-c-analise-semantica" class="md-nav__link">
+    <span class="md-ellipsis">
+      Épico C — Análise Semântica
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#epico-d-geracao-de-codigo-intermediario-ir" class="md-nav__link">
+    <span class="md-ellipsis">
+      Épico D — Geração de Código Intermediário (IR)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#epico-e-otimizacao-opcional" class="md-nav__link">
+    <span class="md-ellipsis">
+      Épico E — Otimização (Opcional)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#epico-f-geracao-de-codigo-final-assembly-x86" class="md-nav__link">
+    <span class="md-ellipsis">
+      Épico F — Geração de Código Final (Assembly x86)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="estrutura-do-backlog">Estrutura do Backlog</h1>
+<p>Foi decidido em grupo que o Backlog terá a seguinte estrutura: <strong>Épico → Feature → User Story → Tasks</strong>, sendo que os <strong>Épicos</strong> representam cada <strong>fase de um Compilador</strong>, e que vão se decompondo em subtarefas (Feature, US's e Task). As User Stories e as Tasks são escritas de forma granular e com linguagem acessível para que todos do time sejam capazes de entender cada tarefa e realizá-las com eficiência.</p>
+<h2 id="epicos">Épicos</h2>
+<h3 id="epico-a-analise-lexica">Épico A -  Análise Léxica</h3>
+<p><strong>Feature A.1: Implementador do Scanner (Flex)</strong> — Status: Feito.</p>
+<ul>
+<li><strong>US-01:</strong> Reconhecer palavras-chave (if, else, while, for, return, struct, typedef, etc.) — Statu - Tasks:</li>
+<li>Listar palavras-chave alvo e inserir em arquivo de tokens.</li>
+<li>Escrever regras Flex para cada palavra-chave.</li>
+<li>
+<p>Adicionar teste unitário que valida reconhecimento de cada palavra-chave.</p>
+</li>
+<li>
+<p><strong>US-02:</strong> Reconhecer identificadores, literais numéricos e caracteres — Status: Feito.</p>
+</li>
+<li>Tasks:</li>
+<li>Implementar expressão regular para identificadores (letra + alfanum/_).</li>
+<li>Implementar regex para literais (inteiros decimais, hex se necessário).</li>
+<li>
+<p>Criar testes unitários cobrindo casos válidos/inválidos.</p>
+</li>
+<li>
+<p><strong>US-03:</strong> Detectar e reportar erros léxicos — Status: Feito (básico).</p>
+</li>
+<li>Tasks:</li>
+<li>Implementar token <code>&lt;INVALID&gt;</code> que captura símbolos inválidos.</li>
+<li>Produzir mensagem de erro com linha/coluna.</li>
+<li>
+<p>Adicionar teste que assegura erro léxico esperado em input malformado.</p>
+</li>
+<li>
+<p><strong>US-04:</strong> Testes automatizados do léxico — Status: Feito (framework presente).</p>
+</li>
+<li>Tasks:</li>
+<li>Integrar testes de léxico no pipeline de testes.</li>
+<li>Cobrir tokens críticos com casos positivos/negativos.</li>
+<li>Criar fixture para carregar pequenos arquivos-sample.</li>
+</ul>
+<h3 id="epico-b-analise-sintatica">Épico B — Análise Sintática</h3>
+<p><strong>Feature B.1: Gramática de Estruturas de Controle (Bison)</strong> — Status: Parcial/Feito (básico).</p>
+<ul>
+<li><strong>US-05:</strong> Suporte a <code>if</code> / <code>else</code> — Status: Feito.</li>
+<li>Tasks:</li>
+<li>Adicionar regras Bison para <code>if</code>/<code>else</code> com produção única e com <code>elif</code> suportado via else-ifencadeado.</li>
+<li>
+<p>Testar casos com aninhamento e ausência de <code>else</code>.</p>
+</li>
+<li>
+<p><strong>US-06:</strong> Suporte a loops (<code>while</code>, <code>for</code>) — Status: A Fazer.</p>
+</li>
+<li>Tasks:</li>
+<li>Escrever gramática para <code>while</code> (condição e bloco).</li>
+<li>Escrever gramática para <code>for</code> (inicialização; condição; passo; bloco).</li>
+<li>
+<p>Testes que verifiquem saltos e escopos internos.</p>
+</li>
+<li>
+<p><strong>US-07:</strong> Suporte a <code>goto</code> / <code>label</code> — Status: Feito.</p>
+</li>
+<li>Tasks:</li>
+<li>Mapear token <code>LABEL</code> e <code>GOTO</code> na gramática.</li>
+<li>Criar pass semântica que resolve labels (flag de resolução tardia).</li>
+<li>
+<p>Testes de jump intra-função inválos (ex.: goto para label fora da função -&gt; erro).</p>
+</li>
+<li>
+<p><strong>US-08:</strong> Funções (declaração e corpo) — Status: Em Andamento / A Fazer.</p>
+</li>
+<li>Tasks:</li>
+<li>Definir produção para <code>function_definition</code> (tipo retorn, id, params, body).</li>
+<li>Implementar parsing de lista de parâmetros (possibilidade vazia).</li>
+<li>
+<p>Testes de definição e chamadas simples.</p>
+</li>
+<li>
+<p><strong>US-09:</strong> Construção da AST — Status: Feito (parcial).</p>
+</li>
+<li>Tasks:</li>
+<li>Definir estrutura de nós AST (Node type, children, token info).</li>
+<li>Alterar ações Bison para criar nós AST em vez de prints temporários.</li>
+<li>
+<p>Serializar AST em formato textual para debug (ex.: S-expr).</p>
+</li>
+<li>
+<p><strong>US-10:</strong> Testes do parser / mensagens de erro sintático — Status: Feito/Em Andamento.</p>
+</li>
+<li>Tasks:</li>
+<li>Implementar harness de teste para rodar parser em inputs e comparar AST.</li>
+<li>Melhorar mensagens de erro com sugestão de recuperação (panic mode simples).</li>
+<li>Cobrir casos sintáticos inválidos no suite.</li>
+</ul>
+<h3 id="epico-c-analise-semantica">Épico C — Análise Semântica</h3>
+<p><strong>Feature C.1: Tabela de Símbolos e Escopagem</strong> — Status: Em Andamento.</p>
+<ul>
+<li><strong>US-11:</strong> Implementar tabela de símbolos (escopos: global, função, estrutura).</li>
+<li>Tasks:</li>
+<li>Criar structs C para <code>Symbol</code> e <code>SymbolTable</code> com encadeamento de escopos.</li>
+<li>Implementar <code>enter_scope()</code> / <code>exit_scope()</code> nas ações semânticas do parser.</li>
+<li>
+<p>Testes de lookup que confirmem visibilidade e sombra (shadowing).</p>
+</li>
+<li>
+<p><strong>US-12:</strong> Resolução de labels por escopo — Status: A Fazer.</p>
+</li>
+<li>Tasks:</li>
+<li>Registrar labels na tabela de symbols com info de função.</li>
+<li>Ao final da função, verificar labels referenciados mas não definidos → erro.</li>
+<li>
+<p>Testes que provoquem erro de label externo.</p>
+</li>
+<li>
+<p><strong>US-13:</strong> Verificação de tipos (compatibilidade) — Status: A Fazer.</p>
+</li>
+<li>Tasks:</li>
+<li>Definir representação de tipos básicos (void, int, char, pointer).</li>
+<li>Implementar verificação em atribuições e retorno de função.</li>
+<li>
+<p>Criar mensagens de erro com local e causa.</p>
+</li>
+<li>
+<p><strong>US-14:</strong> Suporte a variáveis (estática, automática, registrador, imediata) — Status: Em Andament - Tasks (por tipo):</p>
+</li>
+<li>Estático:</li>
+<li>Implementar armazenamento simbólico e geração de label global.</li>
+<li>Teste: variável estática inicializada.</li>
+<li>Automática (stack):</li>
+<li>Definir layout de stack-frame (offset por variável).</li>
+<li>Código de alocação/desalocação no prólogo/epílogo de função.</li>
+<li>Teste: funções recursivas simples com variáveis locais.</li>
+<li>Registrador:</li>
+<li>Marcar variáveis elegíveis para alocação em registrador (heurística simples).</li>
+<li>Tests: atribuição e leitura em registrador vs stack.</li>
+<li>Imediata:</li>
+<li>
+<p>Suportar constantes inline em expressões e propagação simples.</p>
+</li>
+<li>
+<p><strong>US-15:</strong> Ponteiros e endereçamento (<code>&amp;</code>, <code>*</code>) — Status: A Fazer.</p>
+</li>
+<li>Tasks:</li>
+<li>Adicionar tipos ponteiro na representação de tipos.</li>
+<li>Implementar semântica de <code>&amp;</code> para variáveis l-values.</li>
+<li>Tests para leitura/escrita via ponteiro.</li>
+</ul>
+<p><strong>Feature C.2: Verificação de chamadas de função (arg count / types)</strong> — Status: A Fazer.</p>
+<ul>
+<li><strong>US-16:</strong> Checar número e tipos de argumentos — Status: A Fazer.</li>
+<li>Tasks:</li>
+<li>Registrar assinatura de função na tabela de símbolos.</li>
+<li>Ao encontrar chamada, comparar tipos e número → emitir warning/erro.</li>
+<li>Tests: chamada com menos/mais argumentos e tipos incompatíveis.</li>
+</ul>
+<h3 id="epico-d-geracao-de-codigo-intermediario-ir">Épico D — Geração de Código Intermediário (IR)</h3>
+<p><strong>Feature D.1: Definição e Estrutura do IR</strong> — Status: A Fazer.</p>
+<ul>
+<li><strong>US-17:</strong> Escolher representação (three-address code) — Status: A Fazer.</li>
+<li>Tasks:</li>
+<li>Especificar formato textual para IR (op, dst, src1, src2).</li>
+<li>Implementar estruturas C para instruções IR.</li>
+<li>
+<p>Criar utilitário <code>emit_ir(op, dst, src1, src2)</code>.</p>
+</li>
+<li>
+<p><strong>US-18:</strong> Gerar IR para expressões aritméticas — Status: A Fazer.</p>
+</li>
+<li>Tasks:</li>
+<li>Implementar visitor que percorre AST de expressão e emite IR.</li>
+<li>
+<p>Tests: expressão com parênteses e precedência.</p>
+</li>
+<li>
+<p><strong>US-19:</strong> Gerar IR para controle de fluxo — Status: A Fazer.</p>
+</li>
+<li>Tasks:</li>
+<li>Emissão de labels IR (L1, L2...) e saltos condicionais.</li>
+<li>Mapear <code>if/else</code> e <code>while</code> para sequência de labels e jumps.</li>
+<li>
+<p>Tests end-to-end que compilam trecho e chequem IR esperado.</p>
+</li>
+<li>
+<p><strong>US-20:</strong> IR para funções (prólogo/epílogo) — Status: A Fazer.</p>
+</li>
+<li>Tasks:</li>
+<li>Definir convenção de chamada simples (salvar rbp, ajustar rsp etc.)</li>
+<li>Gerar IR para passagem de parâmetros (por stack/registros simples).</li>
+<li>Testes com chamadas aninhadas.</li>
+</ul>
+<h3 id="epico-e-otimizacao-opcional">Épico E — Otimização (Opcional)</h3>
+<p><strong>Feature E.1: Otimizações Locais</strong> — Status: A Fazer.</p>
+<ul>
+<li><strong>US-21:</strong> Constant folding — Status: A Fazer.</li>
+<li>Tasks:</li>
+<li>
+<p>Implementar passe que detecta operações com operandos constantes e substitui por constante co 2. Tests: (2+3)*4 =&gt; 20 no IR.</p>
+</li>
+<li>
+<p><strong>US-22:</strong> Dead code elimination (local) — Status: A Fazer.</p>
+</li>
+<li>Tasks:</li>
+<li>Detectar instruções sem uso (def sem uso) e remover.</li>
+<li>Tests que assegurem semântica preservada.</li>
+</ul>
+<h3 id="epico-f-geracao-de-codigo-final-assembly-x86">Épico F — Geração de Código Final (Assembly x86)</h3>
+<p><strong>Feature F.1: Gerador Assembly x86 (texto)</strong> — Status: Em Andamento (parcial).</p>
+<ul>
+<li><strong>US-23:</strong> Gerar assembly para expressões aritméticas — Status: Em Andamento.</li>
+<li>Tasks:</li>
+<li>Mapear IR aritmético para instruções x86 (add, sub, imul, idiv).</li>
+<li>Implementar gerador simples de alocação temporária (stack spill quando necessário).</li>
+<li>
+<p>Tests: compilar expressão e montar com <code>as</code>/<code>ld</code> (manual check).</p>
+</li>
+<li>
+<p><strong>US-24:</strong> Gerar assembly para controle de fluxo (if/else, loops) — Status: A Fazer.</p>
+</li>
+<li>Tasks:</li>
+<li>Gerar labels e jumps cond/unc.</li>
+<li>Assegurar que labels IR → labels ASM 1:1.</li>
+<li>
+<p>Tests: trecho com if-else e loop.</p>
+</li>
+<li>
+<p><strong>US-25:</strong> Prólogo/Epílogo de função — Status: A Fazer.</p>
+</li>
+<li>Tasks:</li>
+<li>Emitir padrão de função (push rbp; mov rbp, rsp; sub rsp, N).</li>
+<li>Restaurar registros no epílogo e <code>ret</code>.</li>
+<li>
+<p>Tests com função que retorna valor int.</p>
+</li>
+<li>
+<p><strong>US-26:</strong> Gerenciar registradores vs pilha — Status: A Fazer.</p>
+</li>
+<li>Tasks:</li>
+<li>Implementar alocador de registros linear-scan simples (heurística).</li>
+<li>Spill para stack quando necessário.</li>
+<li>
+<p>Tests com uso de muitos temporários.</p>
+</li>
+<li>
+<p><strong>US-27:</strong> Supporte a inserção de assembly inline — Status: A Fazer.</p>
+</li>
+<li>Tasks:</li>
+<li>Permitir token INLINE_ASM incorporado na AST e copiado para output.</li>
+<li>Validar contexto (apenas dentro de funções).</li>
+<li>Testes unitários que preservem bloco inline.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      <div class="md-progress" data-md-component="progress" role="progressbar"></div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.instant.progress", "navigation.instant.preview", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand"], "search": "../../assets/javascripts/workers/search.f8cc74c7.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.c8b220af.min.js"></script>
+      
+    
+  </body>
+</html>
