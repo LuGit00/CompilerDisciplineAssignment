@@ -1,741 +1,872 @@
-;scopes: global, struct, function, block
-;function parameters: rdi, rsi, rdx, rcx, r8, r9
 
-%macro _ASSERT_IF_NOT_IN_SCOPE 1-*
-	%rep %0
-		%ifctx %1
-			%fatal
-		%endif
-		%rotate 1
-	%endrep
-%endmacro
-%macro _IF_IN_SCOPE 1-*
-	%undef if_found
-	%rep %0
-		%ifctx %1
-			%xdefine if_found
-			%exitrep
-		%endif
-		%rotate 1
-	%endrep
-	%ifdef if_found
-%endmacro
+; Create Scope
+%push global
+%assign depth 0
 
-%macro _ASSERT_IF_NOT_STATIC 0
-	%ifdef %$if_static
-		%fatal
-	%endif
-%endmacro
-%macro _IF_STATIC 0
-	%ifdef %$if_static
-%endmacro
-%macro _IF_STRUCT_STATIC 0
-	%ifdef %$if_struct_static
-%endmacro
-
-%macro _ASSERT_IF_INTEGER 1
-	%ifnnum %1
-		%fatal
-	%endif
-%endmacro
-%macro _IF_INTEGER 1
-	%ifnum %1
-%endmacro
-%macro _ASSERT_IF_STRING 1
-	%ifnstr %1
-		%fatal
-	%endif
-%endmacro
-%macro _IF_STRING 1
-	%ifstr %1
-%endmacro
-%macro _ASSERT_IF_IDENTIFIER 1
-	%ifnid %1
-		%fatal
-	%endif
-%endmacro
-%macro _IF_IDENTIFIER 1
-	%ifid %1
-%endmacro
-
-%macro _ELSE 0
-	%else
-%endmacro
-%macro _ENDIF 0
-	%endif
-%endmacro
-
-%macro _FETCH_REPRESENTATION 3
-	%undef if_found
-	%assign buffer0 %[%$%1.count] - 1
-	%rep %[%$%1.count]
-		%ifidni %[%$%1.%[buffer0].identifier], %3
-			%xdefine if_found
-			%exitrep
-		%endif
-		%assign buffer0 %[buffer0] - 1
-	%endrep
-	%ifdef if_found
-		%xdefine %2 %[%$%1.%[buffer0].representation]
-	%else
-		%fatal
-	%endif
-%endmacro
-%macro _APPEND_SYMBOL 3-5
-	_ASSERT_IF_IDENTIFIER %1
-	_ASSERT_IF_IDENTIFIER %2
-	%xdefine %$%1.%[%$%1.count].identifier %2
-	%xdefine %$%1.%[%$%1.count].representation %3
-	%if %0 > 3
-		_ASSERT_IF_IDENTIFIER %4
-		%xdefine %$%1.%[%$%1.count].access_modifier %4
-		_ASSERT_IF_INTEGER %5
-		%xdefine %$%1.%[%$%1.count].struct %5
-	%endif
-	%assign %$%1.count %[%$%1.count] + 1
-%endmacro
-%macro _COPY_SYMBOLS 1
-	%ifidni %1, members
-		%rep %[%$$%1.count]
-			_APPEND_SYMBOL %1, %[%$$%1.%[%$%1.count].identifier], %[%$$%1.%[%$%1.count].representation], %[%$$members.%[%$members.count].access_modifier], %[%$$members.%[%$members.count].struct]
-		%endrep
-	%else
-		%rep %[%$$%1.count]
-			_APPEND_SYMBOL %1, %[%$$%1.%[%$%1.count].identifier], %[%$$%1.%[%$%1.count].representation]
-		%endrep
-	%endif
-%endmacro
-
-%macro _OPEN_SCOPE 3
-	%push %1
-	%assign %$arrays.count 0
-	%assign %$structs.count 0
-	%assign %$members.count 0
-	%assign %$functions.count 0
-	%assign %$base_pointer %2
-	%assign %$labels.count 0
-	%assign %$struct_id %3
-	%xdefine %$access_modifier private
-%endmacro
-%macro _CLOSE_SCOPE 0
-	%pop
-%endmacro
-
-_OPEN_SCOPE global, 0, 0
-
-%macro static 0
-	_ASSERT_IF_NOT_IN_SCOPE struct
-	_ASSERT_IF_NOT_STATIC
-	%xdefine %$if_static
-%endmacro
+; Initialize Scope Variables
+%assign %$array_count 0
+%assign %$struct_count 0
+%assign %$function_count 0
 
 %macro array 2
-	_ASSERT_IF_IDENTIFIER %1
-	_ASSERT_IF_INTEGER %2
-	_IF_IN_SCOPE global
-		section .bss
-		%%address: resb %2
-		_APPEND_SYMBOL arrays, %1, %[%%address]
-		_IF_STATIC
-			%undef %$if_static
-			%xdefine %$if_struct_static
-		_ELSE
-			global %[%%address]
-		_ENDIF
-	_ENDIF
-	_IF_IN_SCOPE struct
-		_ASSERT_IF_NOT_STATIC
-		_APPEND_SYMBOL members, %1, %[%$structs.%[%$structs.count].representation] + %2, %[%$access_modifier], %[%$struct_id]
-	_ENDIF
-	_IF_IN_SCOPE function, block
-		_IF_STATIC
-			%undef %$if_static
-			%xdefine %$if_struct_static
-			section .bss
-			%%address: resb %2
-			section %[%$section]
-			_APPEND_SYMBOL arrays, %1, %[%%address]
-		_ELSE
-			%assign %$base_pointer %[%$base_pointer] + %2
-			_APPEND_SYMBOL arrays, %1, [rsp-%[%$base_pointer]]
-		_ENDIF
-	_ENDIF
-%endmacro
 
+	; Scope Checking
+	%ifctx global
+	%elifctx struct
+	%elifctx function
+	%elifctx block
+	%endif
+
+	; Parameter Checking
+	%ifnum %1
+		%fatal
+	%elifstr %1
+		%fatal
+	%elifid %1
+	%endif
+	%ifnum %2
+	%elifstr %2
+		%fatal
+	%elifid %2
+		%fatal
+	%endif
+
+	; Append array Symbol
+	%xdefine %$array_%[%$array_count]_identifier %1
+	%xdefine %$array_%[%$array_count]_address array%[array_count]
+	%ifctx struct
+		%xdefine %$array_%[%$array_count]_access_modifier %$access_modifier
+	%endif
+	%xdefine %$array_%[%$array_count]_depth %[depth]
+	%assign %$array_count %$array_count + 1
+
+	; Set Section For Runtime
+	%ifctx struct
+		absolute %$size
+		%assign %$size %$size + %2
+	%else
+		section .bss
+	%endif
+
+	; Runtime - Create Label, Reserve Bytes
+	array%[array_count]: resb %2
+
+	; Increment ID
+	%assign array_count %[array_count] + 1
+
+%endmacro
 %macro struct 1-*
-	_ASSERT_IF_IDENTIFIER %1
-	; TODO
-	_APPEND_SYMBOL structs, %1, 0
-	_OPEN_SCOPE %??, %[%$$base_pointer], %[%$structs.count]
-	_COPY_SYMBOLS arrays
-	_COPY_SYMBOLS structs
-	_COPY_SYMBOLS members
-	_COPY_SYMBOLS functions
-%endmacro
-%macro public 0
-	_ASSERT_IF_NOT_IN_SCOPE global, function, block
-	_ASSERT_IF_NOT_STATIC
-	%xdefine %$access_modifier %??
-%endmacro
-%macro protected 0
-	_ASSERT_IF_NOT_IN_SCOPE global, function, block
-	_ASSERT_IF_NOT_STATIC
-	%xdefine %$access_modifier %??
+	
+	; Scope Checking
+	%ifctx global
+	%elifctx struct
+	%elifctx function
+	%elifctx block
+	%endif
+
+	; Parameter Checking
+	%ifnum %1
+		%fatal
+	%elifstr %1
+		%fatal
+	%elifid %1
+	%endif
+
+	; Append struct Symbol
+	%xdefine %$struct_%[%$struct_count]_identifier %1
+	%xdefine %$struct_%[%$struct_count]_address struct%[struct_count]
+	%assign %$struct_%[%$struct_count]_size 0
+	%ifctx struct
+		%xdefine %$struct_%[%$struct_count]_access_modifier %$access_modifier
+	%endif
+	%xdefine %$struct_%[%$struct_count]_depth %[depth]
+	%assign %$struct_count %$struct_count + 1
+
+	; Create Scope
+	%push %??
+	%assign depth %[depth] + 1
+
+	; Initialize Scope Variables
+	%assign %$array_count 0
+	%assign %$struct_count 0
+	%assign %$function_count 0
+	%assign %$size 0
+	%xdefine %$access_modifier private
+	%assign %$id %[struct_count]
+
+	; Copy Symbol Tables
+	%rep %$$array_count
+		%xdefine %$array_%[%$array_count]_identifier %$$array_%[%$array_count]_identifier
+		%xdefine %$array_%[%$array_count]_address %$$array_%[%$array_count]_address
+		%xdefine %$array_%[%$array_count]_depth %$$array_%[%$array_count]_depth
+		%assign %$array_count %$array_count + 1
+	%endrep
+	%rep %$$struct_count
+		%xdefine %$struct_%[%$struct_count]_identifier %$$struct_%[%$struct_count]_identifier
+		%xdefine %$struct_%[%$struct_count]_address %$$struct_%[%$struct_count]_address
+		%xdefine %$struct_%[%$struct_count]_size %$$struct_%[%$struct_count]_size
+		%xdefine %$struct_%[%$struct_count]_depth %$$struct_%[%$struct_count]_depth
+		%assign %$struct_count %$struct_count + 1
+	%endrep
+	%rep %$$function_count
+		%xdefine %$function_%[%$function_count]_identifier %$$function_%[%$function_count]_identifier
+		%xdefine %$function_%[%$function_count]_address %$$function_%[%$function_count]_address
+		%xdefine %$function_%[%$function_count]_depth %$$function_%[%$function_count]_depth
+		%assign %$function_count %$function_count + 1
+	%endrep
+
+	; Inherit
+	%rep %0 - 1
+		%rotate 1
+
+		; Parameter Checking
+		%ifnum %1
+			%fatal
+		%elifstr %1
+			%fatal
+		%elifid %1
+		%endif
+
+		; TODO
+
+	%endrep
+
+	; Set Section For Runtime
+	absolute %$size
+
+	; Runtime - Create Label
+	struct%[struct_count]:
+
+	; Increment ID
+	%assign struct_count %[struct_count] + 1
+
 %endmacro
 %macro private 0
-	_ASSERT_IF_NOT_IN_SCOPE global, function, block
-	_ASSERT_IF_NOT_STATIC
-	%xdefine %$access_modifier %??
-%endmacro
-
-%macro function 1-*
-	_IF_IN_SCOPE global
-		_IF_STATIC
-			_ASSERT_IF_IDENTIFIER %1
-			; TODO
-			%xdefine %$section .text.%[%$functions.count]
-			section %[%$section]
-			%%address:
-			_APPEND_SYMBOL functions, %1, %[%%address]
-			push rbp
-			mov rbp, rsp
-			_OPEN_SCOPE %??, %[%$base_pointer], %[%$struct_id]
-			_COPY_SYMBOLS arrays
-			_COPY_SYMBOLS structs
-			_COPY_SYMBOLS members
-			_COPY_SYMBOLS functions
-		_ELSE
-			_ASSERT_IF_IDENTIFIER %1
-			; TODO
-			%xdefine %$section .text.%[%$functions.count]
-			section %[%$section]
-			%%address:
-			_APPEND_SYMBOL functions, %1, %[%%address]
-			push rbp
-			mov rbp, rsp
-			_OPEN_SCOPE %??, %[%$base_pointer], %[%$struct_id]
-			_COPY_SYMBOLS arrays
-			_COPY_SYMBOLS structs
-			_COPY_SYMBOLS members
-			_COPY_SYMBOLS functions
-			global %[%%address]
-		_ENDIF
-	_ENDIF
-	_IF_IN_SCOPE struct
-		_ASSERT_IF_NOT_STATIC
-		_ASSERT_IF_IDENTIFIER %1
-		; TODO
-		%xdefine %$section .text.%[%$functions.count]
-		section %[%$section]
-		%%address:
-		_APPEND_SYMBOL functions, %1, %[%%address]
-		_APPEND_SYMBOL members, %1, %[%%address], %[%$access_modifier], %[%$struct_id]
-		push rbp
-		mov rbp, rsp
-		_OPEN_SCOPE %??, %[%$base_pointer], %[%$struct_id]
-		_COPY_SYMBOLS arrays
-		_COPY_SYMBOLS structs
-		_COPY_SYMBOLS members
-		_COPY_SYMBOLS functions
-	_ENDIF
-	_IF_IN_SCOPE function, block
-		_ASSERT_IF_IDENTIFIER %1
-		; TODO
-		%xdefine %$section .text.%[%$functions.count]
-		section %[%$section]
-		%%address:
-		_APPEND_SYMBOL functions, %1, %[%%address]
-		_APPEND_SYMBOL members, %1, %[%%address], %[%$access_modifier], %[%$struct_id]
-		push rbp
-		mov rbp, rsp
-		_OPEN_SCOPE %??, %[%$base_pointer], %[%$struct_id]
-		_COPY_SYMBOLS arrays
-		_COPY_SYMBOLS structs
-		_COPY_SYMBOLS members
-		_COPY_SYMBOLS functions
-	_ENDIF
-%endmacro
-
-%macro execute 1-*
-	_ASSERT_IF_NOT_IN_SCOPE global, struct
-	_ASSERT_IF_NOT_STATIC
-	_ASSERT_IF_IDENTIFIER %1
-	%assign buffer0 %[%$functions.count] - 1
-	%undef if_found
-	%rep %[%$functions.count]
-		%ifidni %[%$functions.%[buffer0].identifier], %1
-			%xdefine if_found
-			%exitrep
-		%endif
-		%assign buffer0 %[buffer0] - 1
-	%endrep
-	%ifdef if_found
-		%rotate 1
-		%assign buffer1 0
-		%rep %0 - 1
-			%if %[buffer1] == 0
-				mov rdi, %1
-			%elif %[buffer1] == 1
-				mov rsi, %1
-			%elif %[buffer1] == 2
-				mov rdx, %1
-			%elif %[buffer1] == 3
-				mov rcx, %1
-			%elif %[buffer1] == 4
-				mov r8, %1
-			%elif %[buffer1] == 5
-				mov r9, %1
-			%endif
-			%assign buffer1 %[buffer1] + 1
-			%rotate 1
-		%endrep
-		call %[%$functions.%[buffer0].representation]
-	%else
+	
+	; Scope Checking
+	%ifctx global
+		%fatal
+	%elifctx struct
+	%elifctx function
+		%fatal
+	%elifctx block
 		%fatal
 	%endif
+
+	; Set Scope Access Modifier
+	%xdefine %$access_modifier %??
+
+%endmacro
+%macro protected 0
+	
+	; Scope Checking
+	%ifctx global
+		%fatal
+	%elifctx struct
+	%elifctx function
+		%fatal
+	%elifctx block
+		%fatal
+	%endif
+
+	; Set Scope Access Modifier
+	%xdefine %$access_modifier %??
+
+%endmacro
+%macro public 0
+	
+	; Scope Checking
+	%ifctx global
+		%fatal
+	%elifctx struct
+	%elifctx function
+		%fatal
+	%elifctx block
+		%fatal
+	%endif
+
+	; Set Scope Access Modifier
+	%xdefine %$access_modifier %??
+
+%endmacro
+%macro function 1
+	
+	; Scope Checking
+	%ifctx global
+	%elifctx struct
+	%elifctx function
+	%elifctx block
+	%endif
+
+	; Parameter Checking
+	%ifnum %1
+		%fatal
+	%elifstr %1
+		%fatal
+	%elifid %1
+	%endif
+
+	; Append function Symbol
+	%xdefine %$function_%[%$function_count]_identifier %1
+	%xdefine %$function_%[%$function_count]_address function%[function_count]
+	%ifctx struct
+		%xdefine %$function_%[%$function_count]_access_modifier %$access_modifier
+	%endif
+	%xdefine %$function_%[%$function_count]_depth %[depth]
+	%assign %$function_count %$function_count + 1
+
+	; Create Scope
+	%push %??
+	%assign depth %[depth] + 1
+
+	; Initialize Scope Variables
+	%assign %$array_count 0
+	%assign %$struct_count 0
+	%assign %$function_count 0
+	%assign %$label_count 0
+	%ifidni %1, _start
+		%xdefine %$section .text
+	%else
+		%xdefine %$section .text.%1
+	%endif
+
+	; Copy Symbol Tables
+	%rep %$$array_count
+		%xdefine %$array_%[%$array_count]_identifier %$$array_%[%$array_count]_identifier
+		%xdefine %$array_%[%$array_count]_address %$$array_%[%$array_count]_address
+		%xdefine %$array_%[%$array_count]_depth %$$array_%[%$array_count]_depth
+		%assign %$array_count %$array_count + 1
+	%endrep
+	%rep %$$struct_count
+		%xdefine %$struct_%[%$struct_count]_identifier %$$struct_%[%$struct_count]_identifier
+		%xdefine %$struct_%[%$struct_count]_address %$$struct_%[%$struct_count]_address
+		%xdefine %$struct_%[%$struct_count]_size %$$struct_%[%$struct_count]_size
+		%xdefine %$struct_%[%$struct_count]_depth %$$struct_%[%$struct_count]_depth
+		%assign %$struct_count %$struct_count + 1
+	%endrep
+	%rep %$$function_count
+		%xdefine %$function_%[%$function_count]_identifier %$$function_%[%$function_count]_identifier
+		%xdefine %$function_%[%$function_count]_address %$$function_%[%$function_count]_address
+		%xdefine %$function_%[%$function_count]_depth %$$function_%[%$function_count]_depth
+		%assign %$function_count %$function_count + 1
+	%endrep
+
+	; Set Section For Runtime
+	section %$section
+
+	; Runtime - Create Label
+	function%[function_count]:
+
+	; Increment ID
+	%assign function_count %[function_count] + 1
+
+%endmacro
+%macro execute 1
+	
+	; Scope Checking
+	%ifctx global
+		%fatal
+	%elifctx struct
+		%fatal
+	%elifctx function
+	%elifctx block
+	%endif
+
+	; Parameter Checking
+	%ifnum %1
+		%fatal
+	%elifstr %1
+		%fatal
+	%elifid %1
+	%endif
+
+	; Set Section For Runtime
+	section %$section
+
+	; Runtime - Fetch function and call it
+	%assign counter 0
+	%rep %$function_count
+		%ifidni %$function_%[counter]_identifier, %1
+			call %$function_%[counter]_address
+			%exitrep
+		%endif
+		%assign counter %[counter] + 1
+	%endrep
+
 %endmacro
 %macro return 0-1
-	_ASSERT_IF_NOT_IN_SCOPE global, struct
-	_ASSERT_IF_NOT_STATIC
-	%if %0 == 0
-		ret
-	%else
-		_IF_INTEGER %1
-	        mov rax, %1
-	    _ENDIF
-	    _IF_STRING %1
-	        %%address: db %1, 0
-	        mov rax, %[%%address]
-	    _ENDIF
-	    _IF_IDENTIFIER %1
-	        _FETCH_REPRESENTATION arrays, op0, %1
-	        mov rax, op0
-	    _ENDIF
-	    ret
+	
+	; Scope Checking
+	%ifctx global
+		%fatal
+	%elifctx struct
+		%fatal
+	%elifctx function
+	%elifctx block
 	%endif
-%endmacro
 
+	; Set Section For Runtime
+	section %$section
+
+	; Runtime - Fetch Return Value, Epilogue and Return
+	%if %0 == 1
+		%ifnum %1
+		%elifstr %1
+		%elifid %1
+			%assign counter 0
+			%rep %$array_count
+				%ifidni %$array_%[counter]_identifier, %1
+					mov rax, %$array_%[counter]_address
+					%exitrep
+				%endif
+				%assign counter %[counter] + 1
+			%endrep
+		%endif
+		mov rax, %1
+	%endif
+	leave
+	ret
+
+%endmacro
 %macro label 1
-	_ASSERT_IF_NOT_IN_SCOPE global, struct
-	_ASSERT_IF_NOT_STATIC
-	_ASSERT_IF_IDENTIFIER %1
-	%%address:
-	_APPEND_SYMBOL labels, %1, %[%%address]
+	
+	; Scope Checking
+	%ifctx global
+		%fatal
+	%elifctx struct
+		%fatal
+	%elifctx function
+	%elifctx block
+	%endif
+
+	; Parameter Checking
+	%ifnum %1
+		%fatal
+	%elifstr %1
+		%fatal
+	%elifid %1
+	%endif
+
+	; Append label Symbol
+	%xdefine %$label_%[%$label_count]_identifier %1
+	%xdefine %$label_%[%$label_count]_address label%[label_count]
+	%assign %$label_count %$label_count + 1
+
+	; Set Section For Runtime
+	section %$section
+
+	; Runtime - Create Label
+	label%[label_count]:
+
+	; Increment ID
+	%assign label_count %[label_count] + 1
+
 %endmacro
 %macro goto 1
-	_ASSERT_IF_NOT_IN_SCOPE global, struct
-	_ASSERT_IF_NOT_STATIC
-	_ASSERT_IF_IDENTIFIER %1
-	%assign buffer0 %[%$labels.count] - 1
-	%undef if_found
-	%rep %[%$labels.count]
-		%ifidni %[%$labels.%[buffer0].identifier], %1
-			%xdefine if_found
+	
+	; Scope Checking
+	%ifctx global
+		%fatal
+	%elifctx struct
+		%fatal
+	%elifctx function
+	%elifctx block
+	%endif
+
+	; Parameter Checking
+	%ifnum %1
+		%fatal
+	%elifstr %1
+		%fatal
+	%elifid %1
+	%endif
+
+	; Set Section For Runtime
+	section %$section
+
+	; Runtime - Fetch label and jump to it
+	%assign counter 0
+	%rep %$label_count
+		%ifidni %$label_%[counter]_identifier, %1
+			jmp %$label_%[counter]_address
 			%exitrep
 		%endif
-		%assign buffer0 %[buffer0] - 1
+		%assign counter %[counter] + 1
 	%endrep
-	%ifdef if_found
-		jmp %[%$labels.%[buffer0].representation]
-	%else
-		%fatal
-	%endif
-%endmacro
 
+%endmacro
 %macro block 0
-	_ASSERT_IF_NOT_IN_SCOPE global, struct
-	_ASSERT_IF_NOT_STATIC
-	_OPEN_SCOPE %??, %[%$base_pointer], %[%$struct_id]
-	_COPY_SYMBOLS arrays
-	_COPY_SYMBOLS structs
-	_COPY_SYMBOLS members
-	_COPY_SYMBOLS functions
-	_COPY_SYMBOLS labels
-%endmacro
+	
+	; Scope Checking
+	%ifctx global
+		%fatal
+	%elifctx struct
+		%fatal
+	%elifctx function
+	%elifctx block
+	%endif
 
+	; Create Scope
+	%push %??
+	%assign depth %[depth] + 1
+
+	; Initialize Scope Variables
+	%assign %$array_count 0
+	%assign %$struct_count 0
+	%assign %$function_count 0
+	%assign %$label_count 0
+	%xdefine %$section %$$section
+
+	; Copy Symbol Tables
+	%rep %$$array_count
+		%xdefine %$array_%[%$array_count]_identifier %$$array_%[%$array_count]_identifier
+		%xdefine %$array_%[%$array_count]_address %$$array_%[%$array_count]_address
+		%xdefine %$array_%[%$array_count]_depth %$$array_%[%$array_count]_depth
+		%assign %$array_count %$array_count + 1
+	%endrep
+	%rep %$$struct_count
+		%xdefine %$struct_%[%$struct_count]_identifier %$$struct_%[%$struct_count]_identifier
+		%xdefine %$struct_%[%$struct_count]_address %$$struct_%[%$struct_count]_address
+		%xdefine %$struct_%[%$struct_count]_size %$$struct_%[%$struct_count]_size
+		%xdefine %$struct_%[%$struct_count]_depth %$$struct_%[%$struct_count]_depth
+		%assign %$struct_count %$struct_count + 1
+	%endrep
+	%rep %$$function_count
+		%xdefine %$function_%[%$function_count]_identifier %$$function_%[%$function_count]_identifier
+		%xdefine %$function_%[%$function_count]_address %$$function_%[%$function_count]_address
+		%assign %$function_count %$function_count + 1
+	%endrep
+	%rep %$$label_count
+		%xdefine %$label_%[%$label_count]_identifier %$$label_%[%$label_count]_identifier
+		%xdefine %$label_%[%$label_count]_address %$$label_%[%$label_count]_address
+		%assign %$label_count %$label_count + 1
+	%endrep
+
+%endmacro
 %macro if 1
-	_ASSERT_IF_NOT_IN_SCOPE global, struct
-	_ASSERT_IF_NOT_STATIC
+	
+	; Scope Checking
+	%ifctx global
+		%fatal
+	%elifctx struct
+		%fatal
+	%elifctx function
+	%elifctx block
+	%endif
+
+	; Set Section For Runtime
+	section %$section
+
+	; Runtime - Create Block and Compare
 	block
 	cmp %1, 0
 	jz %$if_not
+
 %endmacro
 %macro elif 1
-	_ASSERT_IF_NOT_IN_SCOPE global, struct
-	_ASSERT_IF_NOT_STATIC
-	%$if_not:
+	
+	; Scope Checking
+	%ifctx global
+		%fatal
+	%elifctx struct
+		%fatal
+	%elifctx function
+	%elifctx block
+	%endif
+
+	; Set Section For Runtime
+	section %$section
+
+	; End, Create Block and Compare
 	end
 	block
 	cmp %1, 0
 	jz %$if_not
+
 %endmacro
 %macro else 0
-	_ASSERT_IF_NOT_IN_SCOPE global, struct
-	_ASSERT_IF_NOT_STATIC
-	%$if_not:
+	
+	; Scope Checking
+	%ifctx global
+		%fatal
+	%elifctx struct
+		%fatal
+	%elifctx function
+	%elifctx block
+	%endif
+
+	; End and Create Block
 	end
+	block
+
 %endmacro
 
 %macro assign 2
-    _ASSERT_IF_NOT_IN_SCOPE global, struct
-    _ASSERT_IF_NOT_STATIC
-    _ASSERT_IF_IDENTIFIER %1
-    _FETCH_REPRESENTATION arrays, op0, %1
-    _IF_INTEGER %2
-        mov op0, %2
-    _ENDIF
-    _IF_STRING %2
-        %%address: db %2, 0
-        mov op0, %[%%address]
-    _ENDIF
-    _IF_IDENTIFIER %2
-        _FETCH_REPRESENTATION arrays, op1, %2
-        mov op0, op1
-    _ENDIF
+	
+	; Scope Checking
+	%ifctx global
+		%fatal
+	%elifctx struct
+		%fatal
+	%elifctx function
+	%elifctx block
+	%endif
+
+	; Parameter Checking
+	%ifnum %1
+		%fatal
+	%elifstr %1
+		%fatal
+	%elifid %1
+	%endif
+
 %endmacro
 %macro assign_add 3
-    _ASSERT_IF_NOT_IN_SCOPE global, struct
-    _ASSERT_IF_NOT_STATIC
-    _ASSERT_IF_IDENTIFIER %1
-    _FETCH_REPRESENTATION arrays, op0, %1
-    _IF_INTEGER %2
-        add op0, %2
-    _ENDIF
-    _IF_STRING %2
-        %%address: db %2, 0
-        add op0, %[%%address]
-    _ENDIF
-    _IF_IDENTIFIER %2
-        _FETCH_REPRESENTATION arrays, op1, %2
-        add op0, op1
-    _ENDIF
+	; Scope Checking
+	%ifctx global
+		%fatal
+	%elifctx struct
+		%fatal
+	%elifctx function
+	%elifctx block
+	%endif
+
+	; Parameter Checking
+	%ifnum %1
+		%fatal
+	%elifstr %1
+		%fatal
+	%elifid %1
+	%endif
 %endmacro
 %macro assign_subtract 3
-    _ASSERT_IF_NOT_IN_SCOPE global, struct
-    _ASSERT_IF_NOT_STATIC
-    _ASSERT_IF_IDENTIFIER %1
-    _FETCH_REPRESENTATION arrays, op0, %1
-    _IF_INTEGER %2
-        sub op0, %2
-    _ENDIF
-    _IF_STRING %2
-        %%address: db %2, 0
-        sub op0, %[%%address]
-    _ENDIF
-    _IF_IDENTIFIER %2
-        _FETCH_REPRESENTATION arrays, op1, %2
-        sub op0, op1
-    _ENDIF
+	; Scope Checking
+	%ifctx global
+		%fatal
+	%elifctx struct
+		%fatal
+	%elifctx function
+	%elifctx block
+	%endif
+
+	; Parameter Checking
+	%ifnum %1
+		%fatal
+	%elifstr %1
+		%fatal
+	%elifid %1
+	%endif
 %endmacro
 %macro assign_multiply 3
-    _ASSERT_IF_NOT_IN_SCOPE global, struct
-    _ASSERT_IF_NOT_STATIC
-    _ASSERT_IF_IDENTIFIER %1
-    _FETCH_REPRESENTATION arrays, op0, %1
-    _IF_INTEGER %2
-        imul op0, %2
-    _ENDIF
-    _IF_STRING %2
-        %%address: db %2, 0
-    _ENDIF
-    _IF_IDENTIFIER %2
-        _FETCH_REPRESENTATION arrays, op1, %2
-        imul op0, op1
-    _ENDIF
+	; Scope Checking
+	%ifctx global
+		%fatal
+	%elifctx struct
+		%fatal
+	%elifctx function
+	%elifctx block
+	%endif
+
+	; Parameter Checking
+	%ifnum %1
+		%fatal
+	%elifstr %1
+		%fatal
+	%elifid %1
+	%endif
 %endmacro
-;%macro assign_divide 3
-;    _ASSERT_IF_NOT_IN_SCOPE global, struct
-;    _ASSERT_IF_NOT_STATIC
-;    _ASSERT_IF_IDENTIFIER %1
-;    _FETCH_REPRESENTATION arrays, op0, %1
-;    _IF_INTEGER %2
-;    _ENDIF
-;    _IF_STRING %2
-;        %%address: db %2, 0
-;    _ENDIF
-;    _IF_IDENTIFIER %2
-;        _FETCH_REPRESENTATION arrays, op1, %2
-;    _ENDIF
-;%endmacro
-;%macro assign_modulo 3
-;    _ASSERT_IF_NOT_IN_SCOPE global, struct
-;    _ASSERT_IF_NOT_STATIC
-;    _ASSERT_IF_IDENTIFIER %1
-;    _FETCH_REPRESENTATION arrays, op0, %1
-;    _IF_INTEGER %2
-;    _ENDIF
-;    _IF_STRING %2
-;        %%address: db %2, 0
-;    _ENDIF
-;    _IF_IDENTIFIER %2
-;        _FETCH_REPRESENTATION arrays, op1, %2
-;    _ENDIF
-;%endmacro
 %macro assign_if_less_than 3
-	_ASSERT_IF_NOT_IN_SCOPE global, struct
-	_ASSERT_IF_NOT_STATIC
-	_ASSERT_IF_IDENTIFIER %1
-	_FETCH_REPRESENTATION arrays, op0, %1
-	mov r10, 0
-	_IF_INTEGER %2
-		mov rax, %2
-	_ENDIF
-	_IF_STRING %2
-		%%address2: db %2, 0
-		mov rax, %[%%address2]
-	_ENDIF
-	_IF_IDENTIFIER %2
-		_FETCH_REPRESENTATION arrays, op1, %2
-		mov rax, op1
-	_ENDIF
-	_IF_INTEGER %3
-		mov rbx, %3
-	_ENDIF
-	_IF_STRING %3
-		%%address3: db %3, 0
-		mov rbx, %[%%address3]
-	_ENDIF
-	_IF_IDENTIFIER %3
-		_FETCH_REPRESENTATION arrays, op2, %3
-		mov rbx, op2
-	_ENDIF
-	cmp rax, rbx
-	setl r10b
-	movzx r10, r10b
-	mov op0, r10
+	; Scope Checking
+	%ifctx global
+		%fatal
+	%elifctx struct
+		%fatal
+	%elifctx function
+	%elifctx block
+	%endif
+
+	; Parameter Checking
+	%ifnum %1
+		%fatal
+	%elifstr %1
+		%fatal
+	%elifid %1
+	%endif
 %endmacro
 %macro assign_if_more_than 3
-	_ASSERT_IF_NOT_IN_SCOPE global, struct
-	_ASSERT_IF_NOT_STATIC
-	_ASSERT_IF_IDENTIFIER %1
-	_FETCH_REPRESENTATION arrays, op0, %1
-	mov r10, 0
-	_IF_INTEGER %2
-		mov rax, %2
-	_ENDIF
-	_IF_STRING %2
-		%%address2: db %2, 0
-		mov rax, %[%%address2]
-	_ENDIF
-	_IF_IDENTIFIER %2
-		_FETCH_REPRESENTATION arrays, op1, %2
-		mov rax, op1
-	_ENDIF
-	_IF_INTEGER %3
-		mov rbx, %3
-	_ENDIF
-	_IF_STRING %3
-		%%address3: db %3, 0
-		mov rbx, %[%%address3]
-	_ENDIF
-	_IF_IDENTIFIER %3
-		_FETCH_REPRESENTATION arrays, op2, %3
-		mov rbx, op2
-	_ENDIF
-	cmp rax, rbx
-	setg r10b
-	movzx r10, r10b
-	mov op0, r10
+	; Scope Checking
+	%ifctx global
+		%fatal
+	%elifctx struct
+		%fatal
+	%elifctx function
+	%elifctx block
+	%endif
+
+	; Parameter Checking
+	%ifnum %1
+		%fatal
+	%elifstr %1
+		%fatal
+	%elifid %1
+	%endif
 %endmacro
 %macro assign_if_less_or_equal_than 3
-	_ASSERT_IF_NOT_IN_SCOPE global, struct
-	_ASSERT_IF_NOT_STATIC
-	_ASSERT_IF_IDENTIFIER %1
-	_FETCH_REPRESENTATION arrays, op0, %1
-	mov r10, 0
-	_IF_INTEGER %2
-		mov rax, %2
-	_ENDIF
-	_IF_STRING %2
-		%%address2: db %2, 0
-		mov rax, %[%%address2]
-	_ENDIF
-	_IF_IDENTIFIER %2
-		_FETCH_REPRESENTATION arrays, op1, %2
-		mov rax, op1
-	_ENDIF
-	_IF_INTEGER %3
-		mov rbx, %3
-	_ENDIF
-	_IF_STRING %3
-		%%address3: db %3, 0
-		mov rbx, %[%%address3]
-	_ENDIF
-	_IF_IDENTIFIER %3
-		_FETCH_REPRESENTATION arrays, op2, %3
-		mov rbx, op2
-	_ENDIF
-	cmp rax, rbx
-	setle r10b
-	movzx r10, r10b
-	mov op0, r10
+	; Scope Checking
+	%ifctx global
+		%fatal
+	%elifctx struct
+		%fatal
+	%elifctx function
+	%elifctx block
+	%endif
+
+	; Parameter Checking
+	%ifnum %1
+		%fatal
+	%elifstr %1
+		%fatal
+	%elifid %1
+	%endif
 %endmacro
 %macro assign_if_more_or_equal_than 3
-	_ASSERT_IF_NOT_IN_SCOPE global, struct
-	_ASSERT_IF_NOT_STATIC
-	_ASSERT_IF_IDENTIFIER %1
-	_FETCH_REPRESENTATION arrays, op0, %1
-	mov r10, 0
-	_IF_INTEGER %2
-		mov rax, %2
-	_ENDIF
-	_IF_STRING %2
-		%%address2: db %2, 0
-		mov rax, %[%%address2]
-	_ENDIF
-	_IF_IDENTIFIER %2
-		_FETCH_REPRESENTATION arrays, op1, %2
-		mov rax, op1
-	_ENDIF
-	_IF_INTEGER %3
-		mov rbx, %3
-	_ENDIF
-	_IF_STRING %3
-		%%address3: db %3, 0
-		mov rbx, %[%%address3]
-	_ENDIF
-	_IF_IDENTIFIER %3
-		_FETCH_REPRESENTATION arrays, op2, %3
-		mov rbx, op2
-	_ENDIF
-	cmp rax, rbx
-	setge r10b
-	movzx r10, r10b
-	mov op0, r10
+	; Scope Checking
+	%ifctx global
+		%fatal
+	%elifctx struct
+		%fatal
+	%elifctx function
+	%elifctx block
+	%endif
+
+	; Parameter Checking
+	%ifnum %1
+		%fatal
+	%elifstr %1
+		%fatal
+	%elifid %1
+	%endif
 %endmacro
 %macro assign_if_equal 3
-	_ASSERT_IF_NOT_IN_SCOPE global, struct
-	_ASSERT_IF_NOT_STATIC
-	_ASSERT_IF_IDENTIFIER %1
-	_FETCH_REPRESENTATION arrays, op0, %1
-	mov r10, 0
-	_IF_INTEGER %2
-		mov rax, %2
-	_ENDIF
-	_IF_STRING %2
-		%%address2: db %2, 0
-		mov rax, %[%%address2]
-	_ENDIF
-	_IF_IDENTIFIER %2
-		_FETCH_REPRESENTATION arrays, op1, %2
-		mov rax, op1
-	_ENDIF
-	_IF_INTEGER %3
-		mov rbx, %3
-	_ENDIF
-	_IF_STRING %3
-		%%address3: db %3, 0
-		mov rbx, %[%%address3]
-	_ENDIF
-		_IF_IDENTIFIER %3
-		_FETCH_REPRESENTATION arrays, op2, %3
-		mov rbx, op2
-	_ENDIF
-	cmp rax, rbx
-	sete r10b
-	movzx r10, r10b
-	mov op0, r10
+	; Scope Checking
+	%ifctx global
+		%fatal
+	%elifctx struct
+		%fatal
+	%elifctx function
+	%elifctx block
+	%endif
+
+	; Parameter Checking
+	%ifnum %1
+		%fatal
+	%elifstr %1
+		%fatal
+	%elifid %1
+	%endif
 %endmacro
 %macro assign_if_not_equal 3
-	_ASSERT_IF_NOT_IN_SCOPE global, struct
-	_ASSERT_IF_NOT_STATIC
-	_ASSERT_IF_IDENTIFIER %1
-	_FETCH_REPRESENTATION arrays, op0, %1
-	mov r10, 0
-	_IF_INTEGER %2
-		mov rax, %2
-	_ENDIF
-	_IF_STRING %2
-		%%address2: db %2, 0
-		mov rax, %[%%address2]
-	_ENDIF
-	_IF_IDENTIFIER %2
-		_FETCH_REPRESENTATION arrays, op1, %2
-		mov rax, op1
-	_ENDIF
-	_IF_INTEGER %3
-		mov rbx, %3
-	_ENDIF
-	_IF_STRING %3
-		%%address3: db %3, 0
-		mov rbx, %[%%address3]
-	_ENDIF
-	_IF_IDENTIFIER %3
-		_FETCH_REPRESENTATION arrays, op2, %3
-		mov rbx, op2
-	_ENDIF
-	cmp rax, rbx
-	setne r10b
-	movzx r10, r10b
-	mov op0, r10
-%endmacro
+	; Scope Checking
+	%ifctx global
+		%fatal
+	%elifctx struct
+		%fatal
+	%elifctx function
+	%elifctx block
+	%endif
 
-%macro sizeof 2
-	_ASSERT_IF_NOT_IN_SCOPE global, struct
-	_ASSERT_IF_NOT_STATIC
-	_ASSERT_IF_IDENTIFIER %1
-	_FETCH_REPRESENTATION arrays, op0, %1
-	_FETCH_REPRESENTATION structs, op1, %2
-	mov op0, op1
+	; Parameter Checking
+	%ifnum %1
+		%fatal
+	%elifstr %1
+		%fatal
+	%elifid %1
+	%endif
+%endmacro
+%macro asm 1
+	; Scope Checking
+	%ifctx global
+		%fatal
+	%elifctx struct
+		%fatal
+	%elifctx function
+	%elifctx block
+	%endif
+
+	; Parameter Checking
+	%ifnum %1
+	%elifstr %1
+	%elifid %1
+		%fatal
+	%endif
+
+	; Tokenize String
+	%tok(%1)
+%endmacro
+%macro assign_sizeof 2
+	
+	; Scope Checking
+	%ifctx global
+		%fatal
+	%elifctx struct
+		%fatal
+	%elifctx function
+	%elifctx block
+	%endif
+
+	; Parameter Checking
+	%ifnum %1
+		%fatal
+	%elifstr %1
+		%fatal
+	%elifid %1
+	%endif
+	%ifnum %2
+		%fatal
+	%elifstr %2
+		%fatal
+	%elifid %2
+	%endif
+
 %endmacro
 
 %macro end 0-*
-	_ASSERT_IF_NOT_IN_SCOPE global
-	_ASSERT_IF_NOT_STATIC
-	_IF_IN_SCOPE struct
-		%assign buffer0 0
-		%assign buffer1 0
-		%rep %[%$members.count]
-			%if %[%$members.%[buffer0].struct] == %[%$struct_id]
-				%ifidni %[%$members.%[buffer0].access_modifier], public
-					%xdefine saved_members.public.%[buffer1].identifier %$%members.%[buffer0].identifier
-					%xdefine saved_members.public.%[buffer1].representation %$%members.%[buffer0].representation
-					%assign buffer1 %[buffer1] + 1
-				%elifidni %[%$members.%[buffer0].access_modifier], protected
+	
+	; Scope Checking
+	%ifctx global
+		%fatal
+	%elifctx struct
+	%elifctx function
+	%elifctx block
+	%endif
 
-					%assign buffer1 %[buffer1] + 1
+	; Parameter Checking
+	%if %0 > 0
+		%ifnctx struct
+			%fatal
+		%endif
+	%endif
+
+	; Pre Destroying Processing
+	%ifctx struct
+		%assign size %$size
+		%assign %$struct_%[%$id]_size %$size
+
+		; Initialize Temporary Variables
+		%assign array_public_count 0
+		%assign struct_public_count 0
+		%assign function_public_count 0
+		%assign array_protected_count 0
+		%assign struct_protected_count 0
+		%assign function_protected_count 0
+
+		; Save publics and protecteds
+		%assign counter 0
+		%rep %$array_count
+			%if %$array_%[counter]_depth == %[depth]
+				%ifidni %$array_%[counter]_access_modifier, public
+					%xdefine array_public_%[array_public_count]_identifier %$array_%[counter]_identifier
+					%xdefine array_public_%[array_public_count]_address %$array_%[counter]_address
+					%assign array_public_count %[array_public_count] + 1
+				%elifidni %$array_%[counter]_access_modifier, protected
+					%xdefine array_protected_%[array_protected_count]_identifier %$array_%[counter]_identifier
+					%xdefine array_protected_%[array_protected_count]_address %$array_%[counter]_address
+					%assign array_protected_count %[array_protected_count] + 1
 				%endif
 			%endif
-			%assign buffer0 %[buffer0] + 1
+			%assign counter %[counter] + 1
 		%endrep
-		%assign size %[%$structs.%[%$structs.count].representation]
-		_CLOSE_SCOPE
-		_IF_STRUCT_STATIC
-			%undef %$if_struct_static
-			%rep %0
-				static array %1, %[size]
-				%assign buffer0 0
-				%rep %[buffer1]
-					_APPEND_SYMBOL members, %1.%[saved_members.public.%[buffer0].identifier], %[saved_members.public.%[buffer0].representation], %[%$access_modifier], %[%$struct_id]
-					%assign buffer0 %[buffer0] + 1
-				%endrep
-				%rotate 1
-			%endrep
-		_ELSE
-			%rep %0
-				array %1, %[size]
-				%assign buffer0 0
-				%rep %[buffer1]
-					_APPEND_SYMBOL members, %1.%[saved_members.public.%[buffer0].identifier], %[saved_members.public.%[buffer0].representation], %[saved_members.public.%[buffer0].access_modifier], %[%$struct_id]
-					%assign buffer0 %[buffer0] + 1
-				%endrep
-				%rotate 1
-			%endrep
-		_ENDIF
-	_ENDIF
-	_IF_IN_SCOPE function
-		ret
-		_CLOSE_SCOPE
-		%rep %0
-			%fatal
+		%assign counter 0
+		%rep %$struct_count
+			%if %$struct_%[counter]_depth == %[depth]
+				%ifidni %$struct_%[counter]_access_modifier, public
+					%xdefine struct_public_%[struct_public_count]_identifier %$struct_%[counter]_identifier
+					%xdefine struct_public_%[struct_public_count]_address %$struct_%[counter]_address
+					%xdefine struct_public_%[struct_public_count]_size %$struct_%[counter]_size
+					%assign struct_public_count %[struct_public_count] + 1
+				%elifidni %$struct_%[counter]_access_modifier, protected
+					%xdefine struct_protected_%[struct_protected_count]_identifier %$struct_%[counter]_identifier
+					%xdefine struct_protected_%[struct_protected_count]_address %$struct_%[counter]_address
+					%xdefine struct_protected_%[struct_protected_count]_size %$struct_%[counter]_size
+					%assign struct_protected_count %[struct_protected_count] + 1
+				%endif
+			%endif
+			%assign counter %[counter] + 1
 		%endrep
-		section %[%$section]
-	_ENDIF
-	_IF_IN_SCOPE block
+		%assign counter 0
+		%rep %$function_count
+			%if %$function_%[counter]_depth == %[depth]
+				%ifidni %$function_%[counter]_access_modifier, public
+					%xdefine function_public_%[function_public_count]_identifier %$function_%[counter]_identifier
+					%xdefine function_public_%[function_public_count]_address %$function_%[counter]_address
+					%assign function_public_count %[function_public_count] + 1
+				%elifidni %$function_%[counter]_access_modifier, protected
+					%xdefine function_protected_%[function_protected_count]_identifier %$function_%[counter]_identifier
+					%xdefine function_protected_%[function_protected_count]_address %$function_%[counter]_address
+					%assign function_protected_count %[function_protected_count] + 1
+				%endif
+			%endif
+			%assign counter %[counter] + 1
+		%endrep
+
+	%elifctx function
+	%elifctx block
+
+		; Set Section For Runtime
+		section %$section
+
 		%$if_not:
-		_CLOSE_SCOPE
+	%endif
+
+	; Destroy Scope
+	%pop
+	%assign depth %[depth] - 1
+
+	; Post Destroying Processing
+	%ifctx struct
 		%rep %0
-			%fatal
+
+			; Parameter Checking
+			%ifnum %1
+				%fatal
+			%elifstr %1
+				%fatal
+			%elifid %1
+			%endif
+
+			array %1, %[size]
+			%rotate 1
 		%endrep
-	_ENDIF
+
+		; Redeclare Public Variables
+		%assign counter 0
+		%rep %[array_public_count]
+			%xdefine %$array_%[%$array_count]_identifier array_public_%[counter]_identifier
+			%xdefine %$array_%[%$array_count]_address array_public_%[counter]_address
+			%xdefine %$array_%[%$array_count]_depth %[depth]
+			%assign %$array_count %$array_count + 1
+			%assign counter %[counter] + 1
+		%endrep
+		%assign counter 0
+		%rep %[struct_public_count]
+			%xdefine %$struct_%[%$struct_count]_identifier struct_public_%[counter]_identifier
+			%xdefine %$struct_%[%$struct_count]_address struct_public_%[counter]_address
+			%xdefine %$struct_%[%$struct_count]_size struct_public_%[counter]_size
+			%xdefine %$struct_%[%$struct_count]_depth %[depth]
+			%assign %$struct_count %$struct_count + 1
+			%assign counter %[counter] + 1
+		%endrep
+		%assign counter 0
+		%rep %[function_public_count]
+			%xdefine %$function_%[%$function_count]_identifier function_public_%[counter]_identifier
+			%xdefine %$function_%[%$function_count]_address function_public_%[counter]_address
+			%xdefine %$function_%[%$function_count]_depth %[depth]
+			%assign %$function_count %$function_count + 1
+			%assign counter %[counter] + 1
+		%endrep
+
+	%elifctx function
+	%elifctx block
+	%endif
+
 %endmacro
