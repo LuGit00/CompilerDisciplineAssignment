@@ -6,7 +6,7 @@
 ; Initialize Scope Variables
 %assign %$array_count 0
 %assign %$struct_count 0
-%assign %$function_count 0
+%assign %$abi_function_count 0
 
 %macro array 2
 
@@ -89,7 +89,7 @@
 	; Initialize Scope Variables
 	%assign %$array_count 0
 	%assign %$struct_count 0
-	%assign %$function_count 0
+	%assign %$abi_function_count 0
 	%assign %$size 0
 	%xdefine %$access_modifier private
 	%assign %$id %[struct_count]
@@ -108,11 +108,11 @@
 		%xdefine %$struct_%[%$struct_count]_depth %$$struct_%[%$struct_count]_depth
 		%assign %$struct_count %$struct_count + 1
 	%endrep
-	%rep %$$function_count
-		%xdefine %$function_%[%$function_count]_identifier %$$function_%[%$function_count]_identifier
-		%xdefine %$function_%[%$function_count]_address %$$function_%[%$function_count]_address
-		%xdefine %$function_%[%$function_count]_depth %$$function_%[%$function_count]_depth
-		%assign %$function_count %$function_count + 1
+	%rep %$$abi_function_count
+		%xdefine %$function_%[%$abi_function_count]_identifier %$$function_%[%$abi_function_count]_identifier
+		%xdefine %$function_%[%$abi_function_count]_address %$$function_%[%$abi_function_count]_address
+		%xdefine %$function_%[%$abi_function_count]_depth %$$function_%[%$abi_function_count]_depth
+		%assign %$abi_function_count %$abi_function_count + 1
 	%endrep
 
 	; Inherit
@@ -207,13 +207,13 @@
 	%endif
 
 	; Append function Symbol
-	%xdefine %$function_%[%$function_count]_identifier %1
-	%xdefine %$function_%[%$function_count]_address function%[function_count]
+	%xdefine %$function_%[%$abi_function_count]_identifier %1
+	%xdefine %$function_%[%$abi_function_count]_address function%[%$abi_function_count]
 	%ifctx struct
-		%xdefine %$function_%[%$function_count]_access_modifier %$access_modifier
+		%xdefine %$function_%[%$abi_function_count]_access_modifier %$access_modifier
 	%endif
-	%xdefine %$function_%[%$function_count]_depth %[depth]
-	%assign %$function_count %$function_count + 1
+	%xdefine %$function_%[%$abi_function_count]_depth %[depth]
+	%assign %$abi_function_count %$abi_function_count + 1
 
 	; Create Scope
 	%push %??
@@ -222,7 +222,7 @@
 	; Initialize Scope Variables
 	%assign %$array_count 0
 	%assign %$struct_count 0
-	%assign %$function_count 0
+	%assign %$abi_function_count 0
 	%assign %$label_count 0
 	%ifidni %1, _start
 		%xdefine %$section .text
@@ -244,28 +244,30 @@
 		%xdefine %$struct_%[%$struct_count]_depth %$$struct_%[%$struct_count]_depth
 		%assign %$struct_count %$struct_count + 1
 	%endrep
-	%rep %$$function_count
-		%xdefine %$function_%[%$function_count]_identifier %$$function_%[%$function_count]_identifier
-		%xdefine %$function_%[%$function_count]_address %$$function_%[%$function_count]_address
-		%xdefine %$function_%[%$function_count]_depth %$$function_%[%$function_count]_depth
-		%assign %$function_count %$function_count + 1
+	%rep %$$abi_function_count
+		%xdefine %$function_%[%$abi_function_count]_identifier %$$function_%[%$abi_function_count]_identifier
+		%xdefine %$function_%[%$abi_function_count]_address %$$function_%[%$abi_function_count]_address
+		%xdefine %$function_%[%$abi_function_count]_depth %$$function_%[%$abi_function_count]_depth
+		%assign %$abi_function_count %$abi_function_count + 1
 	%endrep
 
 	; Set Section For Runtime
-	section %$section
+	section .text
 
 	; Runtime - Create Label
-	function%[function_count]:
+	%assign current_index %$abi_function_count - 1
+	function%[current_index]:
+	push rbp
+	mov rbp, rsp
 
 	; Increment ID
-	%assign function_count %[function_count] + 1
+	%assign %$abi_function_count %$abi_function_count + 1
 
 %endmacro
 %macro execute 1
 	
 	; Scope Checking
 	%ifctx global
-		%fatal
 	%elifctx struct
 		%fatal
 	%elifctx function
@@ -281,13 +283,15 @@
 	%endif
 
 	; Set Section For Runtime
-	section %$section
+	section .text
 
 	; Runtime - Fetch function and call it
 	%assign counter 0
-	%rep %$function_count
-		%ifidni %$function_%[counter]_identifier, %1
-			call %$function_%[counter]_address
+	%rep %$abi_function_count
+		%xdefine current_id %$function_%[counter]_identifier
+		%xdefine current_addr %$function_%[counter]_address
+		%ifidni current_id, %1
+			call current_addr
 			%exitrep
 		%endif
 		%assign counter %[counter] + 1
@@ -306,7 +310,7 @@
 	%endif
 
 	; Set Section For Runtime
-	section %$section
+	section .text
 
 	; Runtime - Fetch Return Value, Epilogue and Return
 	%if %0 == 1
@@ -413,7 +417,7 @@
 	; Initialize Scope Variables
 	%assign %$array_count 0
 	%assign %$struct_count 0
-	%assign %$function_count 0
+	%assign %$abi_function_count 0
 	%assign %$label_count 0
 	%xdefine %$section %$$section
 
@@ -431,10 +435,10 @@
 		%xdefine %$struct_%[%$struct_count]_depth %$$struct_%[%$struct_count]_depth
 		%assign %$struct_count %$struct_count + 1
 	%endrep
-	%rep %$$function_count
-		%xdefine %$function_%[%$function_count]_identifier %$$function_%[%$function_count]_identifier
-		%xdefine %$function_%[%$function_count]_address %$$function_%[%$function_count]_address
-		%assign %$function_count %$function_count + 1
+	%rep %$$abi_function_count
+		%xdefine %$function_%[%$abi_function_count]_identifier %$$function_%[%$abi_function_count]_identifier
+		%xdefine %$function_%[%$abi_function_count]_address %$$function_%[%$abi_function_count]_address
+		%assign %$abi_function_count %$abi_function_count + 1
 	%endrep
 	%rep %$$label_count
 		%xdefine %$label_%[%$label_count]_identifier %$$label_%[%$label_count]_identifier
@@ -794,7 +798,7 @@
 			%assign counter %[counter] + 1
 		%endrep
 		%assign counter 0
-		%rep %$function_count
+		%rep %$abi_function_count
 			%if %$function_%[counter]_depth == %[depth]
 				%ifidni %$function_%[counter]_access_modifier, public
 					%xdefine function_public_%[function_public_count]_identifier %$function_%[counter]_identifier
@@ -858,10 +862,10 @@
 		%endrep
 		%assign counter 0
 		%rep %[function_public_count]
-			%xdefine %$function_%[%$function_count]_identifier function_public_%[counter]_identifier
-			%xdefine %$function_%[%$function_count]_address function_public_%[counter]_address
-			%xdefine %$function_%[%$function_count]_depth %[depth]
-			%assign %$function_count %$function_count + 1
+			%xdefine %$function_%[%$abi_function_count]_identifier function_public_%[counter]_identifier
+			%xdefine %$function_%[%$abi_function_count]_address function_public_%[counter]_address
+			%xdefine %$function_%[%$abi_function_count]_depth %[depth]
+			%assign %$abi_function_count %$abi_function_count + 1
 			%assign counter %[counter] + 1
 		%endrep
 
