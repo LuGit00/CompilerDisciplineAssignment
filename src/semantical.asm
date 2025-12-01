@@ -45,7 +45,6 @@
 ; =========================
 
 %macro array 2
-    ; context check
     %ifctx global
     %elifctx struct
     %elifctx function
@@ -54,20 +53,18 @@
         %fatal "array: invalid context"
     %endif
 
-    ; param 1 must be identifier
     %ifnid %1
         %fatal "array: first parameter must be identifier"
     %endif
 
-    ; param 2: allow any numeric expression / equ / macro.
-    ; only forbid obvious strings, everything else NASM will evaluate.
+    ; only forbid obvious strings, everything else NASM will evaluate
     %ifstr %2
         %fatal "array: second parameter must NOT be string"
     %endif
 
-    ; register symbol in current scope
+    ; register in current scope
     %xdefine %$array_%[%$array_count]_identifier %1
-    %xdefine %$array_%[%$array_count]_address    array%[array_count]
+    %xdefine %$array_%[%$array_count]_address    %1
     %ifctx struct
         %xdefine %$array_%[%$array_count]_access_modifier %$access_modifier
     %endif
@@ -80,10 +77,8 @@
         %assign %$size %$size + %2
     %else
         section .bss
+        %1: resb %2
     %endif
-
-    array%[array_count]: resb %2
-    %assign array_count array_count + 1
 %endmacro
 
 
@@ -230,10 +225,8 @@
         %xdefine %$function_%[%$function_count]_depth      %$$function_%[%$function_count]_depth
         %assign %$function_count %$function_count + 1
     %endrep
-
     section %$section
     function%[function_count]:
-    enter 0, 0
     %assign function_count function_count + 1
 %endmacro
 
@@ -285,7 +278,6 @@
 
     section %$section
     
-    leave
     ret
 %endmacro
 

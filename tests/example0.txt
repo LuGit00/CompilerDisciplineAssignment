@@ -1,52 +1,85 @@
-array buffer 256
-array flag 8
-array size 8
-
-struct Pair
-    array tmp 2
-end pair1 pair2
-
-
-function sizecheck
-    assign_sizeof size Pair
-    return
+function data
+    asm "section .data"
+    asm "msg_hello:   db 'Mini DSL echo demo',10,0"
+    asm "msg_prompt:  db 'Type something and press ENTER:',10,0"
+    asm "msg_prefix:  db 'You typed: ',0"
+    asm "newline:     db 10,0"
 end
 
-function exit0
-    asm "mov rax, 60"
+array input_buf 64
+array input_len 8
+
+function print_str
+    asm "push rdi"
+    asm "push rax"
+    asm "push rdx"
+
+    asm "mov rdx, 0"
+    asm ".len_loop:"
+    asm "cmp byte [rsi+rdx], 0"
+    asm "je .len_done"
+    asm "inc rdx"
+    asm "jmp .len_loop"
+    asm ".len_done:"
+
+    asm "mov rax, 1"
+    asm "mov rdi, 1"
+    asm "syscall"
+
+    asm "pop rdx"
+    asm "pop rax"
+    asm "pop rdi"
+end
+
+function print_newline
+    asm "lea rsi, [rel newline]"
+    execute print_str
+end
+
+function read_line
+    asm "mov rax, 0"
     asm "mov rdi, 0"
+    asm "lea rsi, [rel input_buf]"
+    asm "mov rdx, 63"
     asm "syscall"
+
+    asm "cmp rax, 0"
+    asm "jle .rl_done"
+
+    asm "mov [rel input_len], rax"
+    asm "mov rcx, rax"
+    asm "dec rcx"
+    asm "cmp byte [rel input_buf+rcx], 10"
+    asm "jne .rl_done"
+    asm "mov byte [rel input_buf+rcx], 0"
+    asm "mov [rel input_len], rcx"
+
+    asm ".rl_done:"
 end
-
-
-function puts
-    asm "mov rax, 1"
-    asm "mov rdi, 1"
-    asm "mov rsi, hello_msg"
-    asm "mov rdx, hello_len"
-    asm "syscall"
-    return
-end
-
-function putcA
-    asm "mov rax, 1"
-    asm "mov rdi, 1"
-    asm "mov rsi, char_A"
-    asm "mov rdx, 1"
-    asm "syscall"
-    return
-end
-
 
 function main
-    assign_if_less_than flag 1 2
-    execute sizecheck
-    execute puts
-    execute putcA
-    execute exit0
+    asm "lea rsi, [rel msg_hello]"
+    execute print_str
+
+    asm "lea rsi, [rel msg_prompt]"
+    execute print_str
+
+    execute read_line
+
+    asm "lea rsi, [rel msg_prefix]"
+    execute print_str
+
+    asm "lea rsi, [rel input_buf]"
+    execute print_str
+
+    execute print_newline
 end
 
-
-asm "hello_msg: db 'Hello from stdio', 10"
-asm "hello_len equ $ - hello_msg"
-asm "char_A: db 'A'"
+function _start
+    asm "global _start"
+    asm "_start:"
+    execute main
+    asm "mov rax, 60"
+    asm "xor rdi, rdi"
+    asm "syscall"
+end

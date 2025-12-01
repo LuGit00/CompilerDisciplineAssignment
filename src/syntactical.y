@@ -32,33 +32,33 @@ FILE *out_file = NULL;
 
 array_declaration :
     ARRAY ID NUMBER
-        { fprintf(out_file,"array %s, %s\n",$2,$3); }
+        { fprintf(out_file,"array %s, %s\n", $2, $3); }
     ;
 
 inherit_ids :
       ID
-        { fprintf(out_file,", %s",$1); }
+        { fprintf(out_file,", %s", $1); }
     | inherit_ids ID
-        { fprintf(out_file,", %s",$2); }
+        { fprintf(out_file,", %s", $2); }
     ;
 
 opt_inherit_ids :
-        { fprintf(out_file,"\n"); }
+        { fprintf(out_file, "\n"); }
     | inherit_ids
-        { fprintf(out_file,"\n"); }
+        { fprintf(out_file, "\n"); }
     ;
 
 end_ids :
       ID
-        { fprintf(out_file," %s",$1); }
+        { fprintf(out_file," %s", $1); }
     | end_ids ID
-        { fprintf(out_file,", %s",$2); }
+        { fprintf(out_file,", %s", $2); }
     ;
 
 opt_end_ids :
-        { fprintf(out_file,"\n"); }
+        { fprintf(out_file, "\n"); }
     | end_ids
-        { fprintf(out_file,"\n"); }
+        { fprintf(out_file, "\n"); }
     ;
 
 num_str_id :
@@ -67,73 +67,70 @@ num_str_id :
     | ID
     ;
 
-/* Single unified statement kind, usable at any scope.
-   NASM macros enforce context rules. */
 stmt :
       array_declaration
     | struct_declaration
     | function_declaration
 
     | EXECUTE ID
-        { fprintf(out_file,"execute %s\n",$2); }
+        { fprintf(out_file,"execute %s\n", $2); }
 
     | RETURN
         { fprintf(out_file,"return\n"); }
 
     | LABEL ID
-        { fprintf(out_file,"label %s\n",$2); }
+        { fprintf(out_file,"label %s\n", $2); }
 
     | GOTO ID
-        { fprintf(out_file,"goto %s\n",$2); }
+        { fprintf(out_file,"goto %s\n", $2); }
 
     | BLOCK
         { fprintf(out_file,"block\n"); }
 
     | IF num_str_id
-        { fprintf(out_file,"if %s\n",$2); }
+        { fprintf(out_file,"if %s\n", $2); }
 
     | ELIF num_str_id
-        { fprintf(out_file,"elif %s\n",$2); }
+        { fprintf(out_file,"elif %s\n", $2); }
 
     | ELSE
         { fprintf(out_file,"else\n"); }
 
-    /* Corrigido: ID vem primeiro */
-    | ID ASSIGN num_str_id
-        { fprintf(out_file,"assign %s, %s\n",$1,$3); }
+    | ASSIGN ID num_str_id
+        { fprintf(out_file,"assign %s, %s\n", $2, $3); }
 
-    | ID ASSIGN_ADD num_str_id
-        { fprintf(out_file,"assign_add %s, %s\n",$1,$3); }
+    | ASSIGN_ADD ID num_str_id num_str_id
+        { fprintf(out_file,"assign_add %s, %s, %s\n", $2, $3, $4); }
 
-    | ID ASSIGN_SUBTRACT num_str_id
-        { fprintf(out_file,"assign_subtract %s, %s\n",$1,$3); }
+    | ASSIGN_SUBTRACT ID num_str_id num_str_id
+        { fprintf(out_file,"assign_subtract %s, %s, %s\n", $2, $3, $4); }
 
-    | ID ASSIGN_MULTIPLY num_str_id
-        { fprintf(out_file,"assign_multiply %s, %s\n",$1,$3); }
+    | ASSIGN_MULTIPLY ID num_str_id num_str_id
+        { fprintf(out_file,"assign_multiply %s, %s, %s\n", $2, $3, $4); }
 
-    | ID ASSIGN_IF_LESS_THAN num_str_id num_str_id
-        { fprintf(out_file,"assign_if_less_than %s, %s, %s\n",$1,$3,$4); }
+    | ASSIGN_IF_LESS_THAN ID num_str_id num_str_id
+        { fprintf(out_file,"assign_if_less_than %s, %s, %s\n", $2, $3, $4); }
 
-    | ID ASSIGN_IF_MORE_THAN num_str_id num_str_id
-        { fprintf(out_file,"assign_if_more_than %s, %s, %s\n",$1,$3,$4); }
+    | ASSIGN_IF_MORE_THAN ID num_str_id num_str_id
+        { fprintf(out_file,"assign_if_more_than %s, %s, %s\n", $2, $3, $4); }
 
-    | ID ASSIGN_IF_LESS_OR_EQUAL_THAN num_str_id num_str_id
-        { fprintf(out_file,"assign_if_less_or_equal_than %s, %s, %s\n",$1,$3,$4); }
+    | ASSIGN_IF_LESS_OR_EQUAL_THAN ID num_str_id num_str_id
+        { fprintf(out_file,"assign_if_less_or_equal_than %s, %s, %s\n", $2, $3, $4); }
 
-    | ID ASSIGN_IF_MORE_OR_EQUAL_THAN num_str_id num_str_id
-        { fprintf(out_file,"assign_if_more_or_equal_than %s, %s, %s\n",$1,$3,$4); }
+    | ASSIGN_IF_MORE_OR_EQUAL_THAN ID num_str_id num_str_id
+        { fprintf(out_file,"assign_if_more_or_equal_than %s, %s, %s\n", $2, $3, $4); }
 
-    | ID ASSIGN_IF_EQUAL num_str_id num_str_id
-        { fprintf(out_file,"assign_if_equal %s, %s, %s\n",$1,$3,$4); }
+    | ASSIGN_IF_EQUAL ID num_str_id num_str_id
+        { fprintf(out_file,"assign_if_equal %s, %s, %s\n", $2, $3, $4); }
 
-    | ID ASSIGN_IF_NOT_EQUAL num_str_id num_str_id
-        { fprintf(out_file,"assign_if_not_equal %s, %s, %s\n",$1,$3,$4); }
+    | ASSIGN_IF_NOT_EQUAL ID num_str_id num_str_id
+        { fprintf(out_file,"assign_if_not_equal %s, %s, %s\n", $2, $3, $4); }
 
     | ASM STRING
-        { fprintf(out_file,"asm %s\n",$2); }
+        { fprintf(out_file,"asm %s\n", $2); }
 
     | ASSIGN_SIZEOF ID ID
-        { fprintf(out_file,"assign_sizeof %s, %s\n",$2,$3); }
+        { fprintf(out_file,"assign_sizeof %s, %s\n", $2, $3); }
     ;
 
 struct_body :
@@ -143,7 +140,7 @@ struct_body :
 
 struct_declaration :
     STRUCT ID
-        { fprintf(out_file,"struct %s",$2); }
+        { fprintf(out_file,"struct %s", $2); }
     opt_inherit_ids
     struct_body
     END
@@ -158,7 +155,7 @@ function_body :
 
 function_declaration :
     FUNCTION ID
-        { fprintf(out_file,"function %s\n",$2); }
+        { fprintf(out_file,"function %s\n", $2); }
     function_body
     END
         { fprintf(out_file,"end\n"); }
@@ -185,7 +182,7 @@ void yyerror(const char *s)
 
 int yyparse(void);
 
-int main(int argc,char **argv)
+int main(int argc, char **argv)
 {
     const char *input_name = NULL;
     const char *output_name = NULL;
@@ -195,7 +192,7 @@ int main(int argc,char **argv)
 
     if (argc < 2)
     {
-        fprintf(stderr,"usage: %s input_file [ -o output_file ]\n",argv[0]);
+        fprintf(stderr,"usage: %s input_file [ -o output_file ]\n", argv[0]);
         return 1;
     }
 
@@ -233,15 +230,15 @@ int main(int argc,char **argv)
             fclose(in);
             return 1;
         }
-        strcpy(out_filename,input_name);
-        char *dot = strrchr(out_filename,'.');
+        strcpy(out_filename, input_name);
+        char *dot = strrchr(out_filename, '.');
         if (dot)
-            strcpy(dot,".asm");
+            strcpy(dot, ".asm");
         else
-            strcat(out_filename,".asm");
+            strcat(out_filename, ".asm");
     }
 
-    out_file = fopen(out_filename,"w");
+    out_file = fopen(out_filename, "w");
     if (!out_file)
     {
         perror("fopen output");
@@ -270,15 +267,67 @@ int main(int argc,char **argv)
 
     {
         char cmd[512];
-        snprintf(cmd,sizeof(cmd),
-                 "nasm -E -f elf64 --include src/semantical.asm \"%s\" > preprocessing.txt",
-                 out_filename);
-        if (system(cmd) != 0)
+        char *obj_name = NULL;
+        char *exe_name = NULL;
+        char *dot;
+        size_t base_len;
+
+        /* strip extension from out_filename */
+        dot = strrchr(out_filename, '.');
+        if (dot)
+            base_len = (size_t)(dot - out_filename);
+        else
+            base_len = strlen(out_filename);
+
+        /* base + ".o" + '\0' */
+        obj_name = malloc(base_len + 3);
+        /* base + '\0' */
+        exe_name = malloc(base_len + 1);
+
+        if (!obj_name || !exe_name)
         {
-            fprintf(stderr,"nasm invocation failed.\n");
+            perror("malloc");
+            free(obj_name);
+            free(exe_name);
             free(out_filename);
             return 1;
         }
+
+        memcpy(obj_name, out_filename, base_len);
+        obj_name[base_len] = '\0';
+        strcpy(obj_name + base_len, ".o");  /* now "<base>.o" */
+
+        memcpy(exe_name, out_filename, base_len);
+        exe_name[base_len] = '\0';         /* now "<base>" */
+
+        /* assemble: nasm -f elf64 -o "<base>.o" out_filename */
+        snprintf(cmd, sizeof(cmd),
+                 "nasm -f elf64 -o \"%s\" --include src/semantical.asm \"%s\"",
+                 obj_name, out_filename);
+        if (system(cmd) != 0)
+        {
+            fprintf(stderr, "nasm invocation failed.\n");
+            free(obj_name);
+            free(exe_name);
+            free(out_filename);
+            return 1;
+        }
+
+        /* link: ld -o "<base>" "<base>.o" */
+        snprintf(cmd, sizeof(cmd),
+                 "ld -o \"%s\" \"%s\"",
+                 exe_name, obj_name);
+        if (system(cmd) != 0)
+        {
+            fprintf(stderr, "ld invocation failed.\n");
+            free(obj_name);
+            free(exe_name);
+            free(out_filename);
+            return 1;
+        }
+
+        free(obj_name);
+        free(exe_name);
     }
 
     free(out_filename);
