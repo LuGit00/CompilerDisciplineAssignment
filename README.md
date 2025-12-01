@@ -1,4 +1,4 @@
-# CompilerDisciplineAssignment
+# Aureliani
 
 Projeto desenvolvido para a disciplina de **Compiladores 1** da Universidade de Brasília (UnB).  
 Implementa um compilador para uma **linguagem C-like customizada**, utilizando **Flex** e **Bison** para análise léxica e sintática, e gerando código **assembly compatível com NASM** por meio de um sistema de **macros semânticas**.
@@ -27,7 +27,7 @@ O projeto segue a abordagem de **front-end direto**, onde a análise sintática 
 ## Equipe
 
 <div align="center">
- <p><strong>Membros da Equipe</strong></p>
+ <p><strong>Contribuidores do Aureliani</strong></p>
  <table>
    <tr>
      <td align="center">
@@ -91,14 +91,27 @@ O projeto segue a abordagem de **front-end direto**, onde a análise sintática 
 
 ## Fases do Compilador
 
-O desenvolvimento do compilador seguirá as fases clássicas:
+Nosso compilador adota uma arquitetura simplificada, focada em **geração direta de código** sem representações intermediárias. As fases implementadas são:
 
-1.  **Análise Léxica:** Identificação e classificação de tokens (palavras-chave, identificadores, operadores, etc.).
-2.  **Análise Sintática:** Verificação da estrutura gramatical do código-fonte e construção da Árvore Sintática Abstrata (AST).
-3.  **Análise Semântica:** Verificação de tipos, escopo de variáveis e outras regras de significado da linguagem.
-4.  **Geração de Código Intermediário:** Tradução da AST para uma representação mais próxima do código de máquina.
-5.  **Otimização de Código (Opcional):** Melhorias no código intermediário para aumentar a eficiência.
-6.  **Geração de Código Final:** Tradução do código intermediário para a linguagem alvo (ex: Assembly).
+1. **Análise Léxica**  
+   Realizada com **Flex**, identifica tokens como palavras-chave (`function`, `struct`, `if`), operadores (`=`, `+=`, `<?`), identificadores, números e strings.
+
+2. **Análise Sintática**  
+   Implementada com **Bison**, valida a estrutura gramatical da linguagem e, **durante o parsing**, já **gera diretamente instruções em assembly** compatíveis com o NASM.
+
+3. **Geração de Código Final**  
+   Não há AST, TAC ou código intermediário. As ações semânticas no parser escrevem diretamente no arquivo de saída chamadas a **macros NASM** (ex: `assign x, y`, `struct Pair`, `end instance`).
+
+4. **Análise Semântica (implícita no back-end)**  
+   Regras de escopo, herança, tamanho de structs e resolução de identificadores são **implementadas nas macros de `semantical.asm`**, não no front-end. O NASM realiza essas verificações durante o pré-processamento e montagem.
+
+> **Não implementado:**  
+> - Árvore Sintática Abstrata (AST)  
+> - Código intermediário (TAC, IR)  
+> - Otimização de código  
+> - Verificação explícita de tipos ou escopo no front-end
+
+Essa abordagem permite um compilador **leve e rápido**, ideal para demonstrar conceitos de parsing e integração com assembly, delegando complexidade semântica ao back-end em NASM.
 
 ## Como Rodar o Compilador
 
