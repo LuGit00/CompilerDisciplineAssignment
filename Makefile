@@ -12,4 +12,8 @@ all:
 	$(CC) -o $(TARGET) src/syntactical.tab.o src/lexical.yy.o
 
 clean:
-	rm -f $(TARGET) src/syntactical.tab.c src/syntactical.tab.h src/lexical.yy.c src/syntactical.tab.o src/lexical.yy.o src/parser.output src/parser.tab.c src/parser.tab.h
+	rm -f $(TARGET) preprocessing.txt src/syntactical.tab.c src/syntactical.tab.h src/lexical.yy.c src/syntactical.tab.o src/lexical.yy.o src/parser.output src/parser.tab.c src/parser.tab.h
+	rm -f tests/example0.asm
+
+test:
+	./compiler tests/example0.txt

@@ -6,9 +6,14 @@
 extern int yylex(void);
 extern void yyerror(const char *s);
 extern FILE *yyin;
+extern int yylineno;
+extern char *yytext;
 
-static FILE *out_file = NULL;
+FILE *out_file = NULL;
 %}
+
+%define parse.error verbose
+%define parse.lac full
 
 %union {
     char *sval;
@@ -18,84 +23,163 @@ static FILE *out_file = NULL;
 %token <sval> ID
 %token <sval> NUMBER
 %token <sval> STRING
-%type  <sval> num_str_id
+
+%type <sval> num_str_id
 
 %start global_scope
 
 %%
 
-array_declaration : 
-    ARRAY ID NUMBER { fprintf(out_file,"array %s %s\n",$2,$3); }
+array_declaration :
+    ARRAY ID NUMBER
+        { fprintf(out_file,"array %s, %s\n",$2,$3); }
     ;
 
-struct_declaration : 
-    STRUCT ID IDs struct_scope END IDs { fprintf(out_file,"struct %s\n",$2); }
+inherit_ids :
+      ID
+        { fprintf(out_file,", %s",$1); }
+    | inherit_ids ID
+        { fprintf(out_file,", %s",$2); }
     ;
 
-function_declaration : 
-    FUNCTION ID function_scope END { fprintf(out_file,"function %s\n",$2); }
+opt_inherit_ids :
+        { fprintf(out_file,"\n"); }
+    | inherit_ids
+        { fprintf(out_file,"\n"); }
     ;
 
-IDs : 
-    ID
-    | IDs ID
+end_ids :
+      ID
+        { fprintf(out_file," %s",$1); }
+    | end_ids ID
+        { fprintf(out_file,", %s",$2); }
     ;
 
-num_str_id : 
-    NUMBER { $$ = $1; }
-    | STRING { $$ = $1; }
-    | ID { $$ = $1; }
+opt_end_ids :
+        { fprintf(out_file,"\n"); }
+    | end_ids
+        { fprintf(out_file,"\n"); }
     ;
 
-function_scope : 
-    array_declaration
+num_str_id :
+      NUMBER
+    | STRING
+    | ID
+    ;
+
+/* Single unified statement kind, usable at any scope.
+   NASM macros enforce context rules. */
+stmt :
+      array_declaration
     | struct_declaration
     | function_declaration
-    | EXECUTE ID num_str_id num_str_id { fprintf(out_file,"execute %s %s %s\n",$2,$3,$4); }
-    | RETURN ID num_str_id num_str_id { fprintf(out_file,"return %s %s %s\n",$2,$3,$4); }
-    | LABEL ID num_str_id num_str_id { fprintf(out_file,"label %s %s %s\n",$2,$3,$4); }
-    | GOTO ID num_str_id num_str_id { fprintf(out_file,"goto %s %s %s\n",$2,$3,$4); }
-    | BLOCK ID num_str_id num_str_id { fprintf(out_file,"block %s %s %s\n",$2,$3,$4); }
-    | IF ID num_str_id num_str_id { fprintf(out_file,"if %s %s %s\n",$2,$3,$4); }
-    | ELIF ID num_str_id num_str_id { fprintf(out_file,"elif %s %s %s\n",$2,$3,$4); }
-    | ELSE ID num_str_id num_str_id { fprintf(out_file,"else %s %s %s\n",$2,$3,$4); }
-    | ASSIGN ID num_str_id num_str_id { fprintf(out_file,"assign %s %s %s\n",$2,$3,$4); }
-    | ASSIGN_ADD ID num_str_id num_str_id { fprintf(out_file,"assign_add %s %s %s\n",$2,$3,$4); }
-    | ASSIGN_SUBTRACT ID num_str_id num_str_id { fprintf(out_file,"assign_subtract %s %s %s\n",$2,$3,$4); }
-    | ASSIGN_MULTIPLY ID num_str_id num_str_id { fprintf(out_file,"assign_multiply %s %s %s\n",$2,$3,$4); }
-    | ASSIGN_IF_LESS_THAN ID num_str_id num_str_id { fprintf(out_file,"assign_if_less_than %s %s %s\n",$2,$3,$4); }
-    | ASSIGN_IF_MORE_THAN ID num_str_id num_str_id { fprintf(out_file,"assign_if_more_than %s %s %s\n",$2,$3,$4); }
-    | ASSIGN_IF_LESS_OR_EQUAL_THAN ID num_str_id num_str_id { fprintf(out_file,"assign_if_less_or_equal_than %s %s %s\n",$2,$3,$4); }
-    | ASSIGN_IF_MORE_OR_EQUAL_THAN ID num_str_id num_str_id { fprintf(out_file,"assign_if_more_or_equal_than %s %s %s\n",$2,$3,$4); }
-    | ASSIGN_IF_EQUAL ID num_str_id num_str_id { fprintf(out_file,"assign_if_equal %s %s %s\n",$2,$3,$4); }
-    | ASSIGN_IF_NOT_EQUAL ID num_str_id num_str_id { fprintf(out_file,"assign_if_not_equal %s %s %s\n",$2,$3,$4); }
-    | ASM STRING { fprintf(out_file,"asm %s\n",$2); }
-    | ASSIGN_SIZEOF ID ID { fprintf(out_file,"assign_sizeof %s %s\n",$2,$3); }
-    | END { fprintf(out_file,"end\n"); }
+
+    | EXECUTE ID
+        { fprintf(out_file,"execute %s\n",$2); }
+
+    | RETURN
+        { fprintf(out_file,"return\n"); }
+
+    | LABEL ID
+        { fprintf(out_file,"label %s\n",$2); }
+
+    | GOTO ID
+        { fprintf(out_file,"goto %s\n",$2); }
+
+    | BLOCK
+        { fprintf(out_file,"block\n"); }
+
+    | IF num_str_id
+        { fprintf(out_file,"if %s\n",$2); }
+
+    | ELIF num_str_id
+        { fprintf(out_file,"elif %s\n",$2); }
+
+    | ELSE
+        { fprintf(out_file,"else\n"); }
+
+    | ASSIGN ID num_str_id
+        { fprintf(out_file,"assign %s, %s\n",$2,$3); }
+
+    | ASSIGN_ADD ID num_str_id num_str_id
+        { fprintf(out_file,"assign_add %s, %s, %s\n",$2,$3,$4); }
+
+    | ASSIGN_SUBTRACT ID num_str_id num_str_id
+        { fprintf(out_file,"assign_subtract %s, %s, %s\n",$2,$3,$4); }
+
+    | ASSIGN_MULTIPLY ID num_str_id num_str_id
+        { fprintf(out_file,"assign_multiply %s, %s, %s\n",$2,$3,$4); }
+
+    | ASSIGN_IF_LESS_THAN ID num_str_id num_str_id
+        { fprintf(out_file,"assign_if_less_than %s, %s, %s\n",$2,$3,$4); }
+
+    | ASSIGN_IF_MORE_THAN ID num_str_id num_str_id
+        { fprintf(out_file,"assign_if_more_than %s, %s, %s\n",$2,$3,$4); }
+
+    | ASSIGN_IF_LESS_OR_EQUAL_THAN ID num_str_id num_str_id
+        { fprintf(out_file,"assign_if_less_or_equal_than %s, %s, %s\n",$2,$3,$4); }
+
+    | ASSIGN_IF_MORE_OR_EQUAL_THAN ID num_str_id num_str_id
+        { fprintf(out_file,"assign_if_more_or_equal_than %s, %s, %s\n",$2,$3,$4); }
+
+    | ASSIGN_IF_EQUAL ID num_str_id num_str_id
+        { fprintf(out_file,"assign_if_equal %s, %s, %s\n",$2,$3,$4); }
+
+    | ASSIGN_IF_NOT_EQUAL ID num_str_id num_str_id
+        { fprintf(out_file,"assign_if_not_equal %s, %s, %s\n",$2,$3,$4); }
+
+    | ASM STRING
+        { fprintf(out_file,"asm %s\n",$2); }
+
+    | ASSIGN_SIZEOF ID ID
+        { fprintf(out_file,"assign_sizeof %s, %s\n",$2,$3); }
     ;
 
-struct_scope : 
-    array_declaration
-    | struct_declaration
-    | function_declaration
+struct_body :
+        /* empty */
+    | struct_body stmt
     ;
 
-global_statement : 
-    array_declaration
-    | struct_declaration
-    | function_declaration
+struct_declaration :
+    STRUCT ID
+        { fprintf(out_file,"struct %s",$2); }
+    opt_inherit_ids
+    struct_body
+    END
+        { fprintf(out_file,"end"); }
+    opt_end_ids
     ;
 
-global_scope : 
-    global_statement
-    | global_scope global_statement
+function_body :
+        /* empty */
+    | function_body stmt
+    ;
+
+function_declaration :
+    FUNCTION ID
+        { fprintf(out_file,"function %s\n",$2); }
+    function_body
+    END
+        { fprintf(out_file,"end\n"); }
+    ;
+
+global_scope :
+        /* empty */
+    | global_scope stmt
     ;
 
 %%
 
 void yyerror(const char *s)
 {
-    fprintf(stderr,"Erro de sintaxe: %s\n",s);
+    if (yytext && yytext[0] != '\0')
+        fprintf(stderr,
+                "Parser error at line %d near '%s': %s\n",
+                yylineno, yytext, s);
+    else
+        fprintf(stderr,
+                "Parser error at line %d at end of input: %s\n",
+                yylineno, s);
 }
 
 int yyparse(void);
@@ -108,47 +192,41 @@ int main(int argc,char **argv)
     FILE *in;
     int i;
 
-    if(argc < 2)
+    if (argc < 2)
     {
         fprintf(stderr,"usage: %s input_file [ -o output_file ]\n",argv[0]);
         return 1;
     }
 
-    for(i = 1; i < argc; ++i)
+    for (i = 1; i < argc; ++i)
     {
-        if(strcmp(argv[i],"-o") == 0 && i + 1 < argc)
-        {
+        if (strcmp(argv[i],"-o") == 0 && i + 1 < argc)
             output_name = argv[++i];
-        }
-        else if(argv[i][0] != '-' && !input_name)
-        {
+        else if (argv[i][0] != '-' && !input_name)
             input_name = argv[i];
-        }
     }
 
-    if(!input_name)
+    if (!input_name)
     {
         fprintf(stderr,"no input file\n");
         return 1;
     }
 
     in = fopen(input_name,"r");
-    if(!in)
+    if (!in)
     {
         perror("fopen input");
         return 1;
     }
     yyin = in;
 
-    if(output_name)
-    {
+    if (output_name)
         out_filename = strdup(output_name);
-    }
     else
     {
         size_t len = strlen(input_name);
         out_filename = malloc(len + 5);
-        if(!out_filename)
+        if (!out_filename)
         {
             perror("malloc");
             fclose(in);
@@ -156,14 +234,14 @@ int main(int argc,char **argv)
         }
         strcpy(out_filename,input_name);
         char *dot = strrchr(out_filename,'.');
-        if(dot)
+        if (dot)
             strcpy(dot,".asm");
         else
             strcat(out_filename,".asm");
     }
 
     out_file = fopen(out_filename,"w");
-    if(!out_file)
+    if (!out_file)
     {
         perror("fopen output");
         fclose(in);
@@ -171,7 +249,7 @@ int main(int argc,char **argv)
         return 1;
     }
 
-    if(yyparse() != 0)
+    if (yyparse() != 0)
     {
         fprintf(stderr,"Parsing failed.\n");
         fclose(in);
@@ -182,7 +260,7 @@ int main(int argc,char **argv)
 
     fclose(in);
 
-    if(fclose(out_file) != 0)
+    if (fclose(out_file) != 0)
     {
         perror("fclose output");
         free(out_filename);
@@ -191,8 +269,10 @@ int main(int argc,char **argv)
 
     {
         char cmd[512];
-        snprintf(cmd,sizeof(cmd),"nasm -f elf64 \"%s\"",out_filename);
-        if(system(cmd) != 0)
+        snprintf(cmd,sizeof(cmd),
+                 "nasm -E -f elf64 --include src/semantical.asm \"%s\" > preprocessing.txt",
+                 out_filename);
+        if (system(cmd) != 0)
         {
             fprintf(stderr,"nasm invocation failed.\n");
             free(out_filename);
