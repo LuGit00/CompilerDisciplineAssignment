@@ -10,9 +10,9 @@
 #include "syntactical.tab.h"
 %}
 
-/* =============
-   TOKENS C-LIKE
-   ============= */
+/* ===================
+      TOKENS C-LIKE
+   =================== */
 
 /* Palavras-chave */
 "function"          { return FUNCTION; }
