@@ -10,42 +10,66 @@
 #include "syntactical.tab.h"
 %}
 
-%%
+/* =============
+   TOKENS C-LIKE
+   ============= */
 
-array                         { return ARRAY; }
-struct                        { return STRUCT; }
-private                       { return PRIVATE; }
-protected                     { return PROTECTED; }
-public                        { return PUBLIC; }
-function                      { return FUNCTION; }
-execute                       { return EXECUTE; }
-return                        { return RETURN; }
-label                         { return LABEL; }
-goto                          { return GOTO; }
-block                         { return BLOCK; }
-if                            { return IF; }
-elif                          { return ELIF; }
-else                          { return ELSE; }
-assign                        { return ASSIGN; }
-assign_add                    { return ASSIGN_ADD; }
-assign_subtract               { return ASSIGN_SUBTRACT; }
-assign_multiply               { return ASSIGN_MULTIPLY; }
-assign_if_less_than           { return ASSIGN_IF_LESS_THAN; }
-assign_if_more_than           { return ASSIGN_IF_MORE_THAN; }
-assign_if_less_or_equal_than  { return ASSIGN_IF_LESS_OR_EQUAL_THAN; }
-assign_if_more_or_equal_than  { return ASSIGN_IF_MORE_OR_EQUAL_THAN; }
-assign_if_equal               { return ASSIGN_IF_EQUAL; }
-assign_if_not_equal           { return ASSIGN_IF_NOT_EQUAL; }
-asm                           { return ASM; }
-assign_sizeof                 { return ASSIGN_SIZEOF; }
-end                           { return END; }
+/* Palavras-chave */
+"function"          { return FUNCTION; }
+"struct"            { return STRUCT; }
+"return"            { return RETURN; }
+"if"                { return IF; }
+"else"              { return ELSE; }
+"goto"              { return GOTO; }
+"asm"               { return ASM; }
+"sizeof"            { return ASSIGN_SIZEOF; }
 
-[ \t\r\n]+                    ;   /* skip whitespace */
+/* Operadores compostos */
+"=="                { return ASSIGN_IF_EQUAL; }
+"!="                { return ASSIGN_IF_NOT_EQUAL; }
+"<="                { return ASSIGN_IF_LESS_OR_EQUAL_THAN; }
+">="                { return ASSIGN_IF_MORE_OR_EQUAL_THAN; }
+"<"                 { return ASSIGN_IF_LESS_THAN; }
+">"                 { return ASSIGN_IF_MORE_THAN; }
 
-[a-zA-Z_][a-zA-Z0-9_]*        { yylval.sval = strdup(yytext); return ID; }
-[0-9]+                        { yylval.sval = strdup(yytext); return NUMBER; }
-\"([^\\\"]|\\.)*\"            { yylval.sval = strdup(yytext); return STRING; }
+"+="                { return ASSIGN_ADD; }
+"-="                { return ASSIGN_SUBTRACT; }
+"*="                { return ASSIGN_MULTIPLY; }
 
-.                             { return yytext[0]; }
+"="                 { return ASSIGN; }
+
+/* Símbolos */
+"{"                 { return BLOCK; }
+"}"                 { return END; }
+";"                 { return ';'; }
+"("                 { return '('; }
+")"                 { return ')'; }
+","                 { return ','; }
+
+/* Ignorar whitespace */
+[ \t\r\n]+          ;
+
+/* Identificadores */
+[a-zA-Z_][a-zA-Z0-9_]* {
+    yylval.sval = strdup(yytext);
+    return ID;
+}
+
+/* Números */
+[0-9]+ {
+    yylval.sval = strdup(yytext);
+    return NUMBER;
+}
+
+/* Strings C-like */
+\"([^\\\"]|\\.)*\" {
+    yylval.sval = strdup(yytext);
+    return STRING;
+}
+
+/* Qualquer outro caractere */
+. {
+    return yytext[0];
+}
 
 %%
