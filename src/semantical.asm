@@ -1,12 +1,14 @@
-; array_declaration : ARRAY ID NUMBER { ; }
-; struct_declaration : STRUCT ID IDs struct_scope END IDs { ; }
-; function_declaration : FUNCTION ID function_scope END { ; }
-; num_str_id : NUMBER | STRING | 
+
+; array_declaration : ARRAY ID NUMBER
+; struct_declaration : STRUCT ID IDs struct_scope END IDs
+; function_declaration : FUNCTION ID function_scope END
+; num_str_id : NUMBER | STRING | ID
 ; function_scope :
-;     array_declaration { $$ = $1 ; }
-;     | struct_declaration { $$ = $1 ; }
-;     | function_declaration { $$ = $1 ; }
+;     array_declaration
+;     | struct_declaration
+;     | function_declaration
 ;     | EXECUTE ID
+;	  | RETURN
 ;     | RETURN ID
 ;     | LABEL ID
 ;     | GOTO ID
@@ -14,33 +16,33 @@
 ;     | IF ID
 ;     | ELIF ID
 ;     | ELSE ID
-;     | ASSIGN ID
-;     | ASSIGN_ADD ID
-;     | ASSIGN_SUBTRACT ID
-;     | ASSIGN_MULTIPLY ID
-;     | ASSIGN_IF_LESS_THAN ID
-;     | ASSIGN_IF_MORE_THAN ID
-;     | ASSIGN_IF_LESS_OR_EQUAL_THAN ID
-;     | ASSIGN_IF_MORE_OR_EQUAL_THAN ID
-;     | ASSIGN_IF_EQUAL ID
-;     | ASSIGN_IF_NOT_EQUAL ID
+;     | ASSIGN ID num_str_id num_str_id
+;     | ASSIGN_ADD ID num_str_id num_str_id
+;     | ASSIGN_SUBTRACT ID num_str_id num_str_id
+;     | ASSIGN_MULTIPLY ID num_str_id num_str_id
+;     | ASSIGN_IF_LESS_THAN ID num_str_id num_str_id
+;     | ASSIGN_IF_MORE_THAN ID num_str_id num_str_id
+;     | ASSIGN_IF_LESS_OR_EQUAL_THAN ID num_str_id num_str_id
+;     | ASSIGN_IF_MORE_OR_EQUAL_THAN ID num_str_id num_str_id
+;     | ASSIGN_IF_EQUAL ID num_str_id num_str_id
+;     | ASSIGN_IF_NOT_EQUAL ID num_str_id num_str_id
 ;     | ASM STRING
 ;     | ASSIGN_SIZEOF ID ID
-;     | END
+;     | END IDs
 ;     ;
 ; struct_scope :
-;     array_declaration { $$ = $1 ; }
-;     | struct_declaration { $$ = $1 ; }
-;     | function_declaration { $$ = $1 ; }
+;     array_declaration
+;     | struct_declaration
+;     | function_declaration
 ;     ;
 ; global_statement :
-;     array_declaration { $$ = $1 ; }
-;     | struct_declaration { $$ = $1 ; }
-;     | function_declaration { $$ = $1 ; }
+;     array_declaration
+;     | struct_declaration
+;     | function_declaration
 ;     ;
 ; global_scope :
-;     global_statement { $$ = $1 ; }
-;     | global_statement global_scope { $$ = $1 $2 ; }
+;     global_statement
+;     | global_statement global_scope
 ;     ;
 
 ; Create Scope
@@ -62,12 +64,9 @@
 	%endif
 
 	; Parameter Checking
-	%ifnum %1
-		%fatal
-	%elifstr %1
-		%fatal
-	%elifid %1
-	%endif
+	%ifnid %1
+        %fatal
+    %endif
 	%ifnum %2
 	%elifstr %2
 		%fatal
@@ -78,7 +77,7 @@
 	; Append array Symbol
 	%xdefine %$array_%[%$array_count]_identifier %1
 	%xdefine %$array_%[%$array_count]_address array%[array_count]
-	%ifctx structy
+	%ifctx struct
 		%xdefine %$array_%[%$array_count]_access_modifier %$access_modifier
 	%endif
 	%xdefine %$array_%[%$array_count]_depth %[depth]
@@ -109,12 +108,9 @@
 	%endif
 
 	; Parameter Checking
-	%ifnum %1
-		%fatal
-	%elifstr %1
-		%fatal
-	%elifid %1
-	%endif
+	%ifnid %1
+        %fatal
+    %endif
 
 	; Append struct Symbol
 	%xdefine %$struct_%[%$struct_count]_identifier %1
@@ -140,22 +136,22 @@
 
 	; Copy Symbol Tables
 	%rep %$$array_count
-		%xdefine %$array_%[%$array_count]identifier %$$array%[%$array_count]_identifier
-		%xdefine %$array_%[%$array_count]address %$$array%[%$array_count]_address
-		%xdefine %$array_%[%$array_count]depth %$$array%[%$array_count]_depth
+		%xdefine %$array_%[%$array_count]_identifier %$$array_%[%$array_count]_identifier
+		%xdefine %$array_%[%$array_count]_address %$$array_%[%$array_count]_address
+		%xdefine %$array_%[%$array_count]_depth %$$array_%[%$array_count]_depth
 		%assign %$array_count %$array_count + 1
 	%endrep
 	%rep %$$struct_count
-		%xdefine %$struct_%[%$struct_count]identifier %$$struct%[%$struct_count]_identifier
-		%xdefine %$struct_%[%$struct_count]address %$$struct%[%$struct_count]_address
-		%xdefine %$struct_%[%$struct_count]size %$$struct%[%$struct_count]_size
-		%xdefine %$struct_%[%$struct_count]depth %$$struct%[%$struct_count]_depth
+		%xdefine %$struct_%[%$struct_count]_identifier %$$struct_%[%$struct_count]_identifier
+		%xdefine %$struct_%[%$struct_count]_address %$$struct_%[%$struct_count]_address
+		%xdefine %$struct_%[%$struct_count]_size %$$struct_%[%$struct_count]_size
+		%xdefine %$struct_%[%$struct_count]_depth %$$struct_%[%$struct_count]_depth
 		%assign %$struct_count %$struct_count + 1
 	%endrep
 	%rep %$$function_count
-		%xdefine %$function_%[%$function_count]identifier %$$function%[%$function_count]_identifier
-		%xdefine %$function_%[%$function_count]address %$$function%[%$function_count]_address
-		%xdefine %$function_%[%$function_count]depth %$$function%[%$function_count]_depth
+		%xdefine %$function_%[%$function_count]_identifier %$$function_%[%$function_count]_identifier
+		%xdefine %$function_%[%$function_count]_address %$$function_%[%$function_count]_address
+		%xdefine %$function_%[%$function_count]_depth %$$function_%[%$function_count]_depth
 		%assign %$function_count %$function_count + 1
 	%endrep
 
@@ -171,6 +167,7 @@
 		%elifid %1
 		%endif
 
+		; Fetch structs protcedt symbol tables and declare the protected variables as if they were public
 		; TODO
 
 	%endrep
@@ -243,12 +240,9 @@
 	%endif
 
 	; Parameter Checking
-	%ifnum %1
-		%fatal
-	%elifstr %1
-		%fatal
-	%elifid %1
-	%endif
+	%ifnid %1
+        %fatal
+    %endif
 
 	; Append function Symbol
 	%xdefine %$function_%[%$function_count]_identifier %1
@@ -276,22 +270,22 @@
 
 	; Copy Symbol Tables
 	%rep %$$array_count
-		%xdefine %$array_%[%$array_count]identifier %$$array%[%$array_count]_identifier
-		%xdefine %$array_%[%$array_count]address %$$array%[%$array_count]_address
-		%xdefine %$array_%[%$array_count]depth %$$array%[%$array_count]_depth
+		%xdefine %$array_%[%$array_count]_identifier %$$array_%[%$array_count]_identifier
+		%xdefine %$array_%[%$array_count]_address %$$array_%[%$array_count]_address
+		%xdefine %$array_%[%$array_count]_depth %$$array_%[%$array_count]_depth
 		%assign %$array_count %$array_count + 1
 	%endrep
 	%rep %$$struct_count
-		%xdefine %$struct_%[%$struct_count]identifier %$$struct%[%$struct_count]_identifier
-		%xdefine %$struct_%[%$struct_count]address %$$struct%[%$struct_count]_address
-		%xdefine %$struct_%[%$struct_count]size %$$struct%[%$struct_count]_size
-		%xdefine %$struct_%[%$struct_count]depth %$$struct%[%$struct_count]_depth
+		%xdefine %$struct_%[%$struct_count]_identifier %$$struct_%[%$struct_count]_identifier
+		%xdefine %$struct_%[%$struct_count]_address %$$struct_%[%$struct_count]_address
+		%xdefine %$struct_%[%$struct_count]_size %$$struct_%[%$struct_count]_size
+		%xdefine %$struct_%[%$struct_count]_depth %$$struct_%[%$struct_count]_depth
 		%assign %$struct_count %$struct_count + 1
 	%endrep
 	%rep %$$function_count
-		%xdefine %$function_%[%$function_count]identifier %$$function%[%$function_count]_identifier
-		%xdefine %$function_%[%$function_count]address %$$function%[%$function_count]_address
-		%xdefine %$function_%[%$function_count]depth %$$function%[%$function_count]_depth
+		%xdefine %$function_%[%$function_count]_identifier %$$function_%[%$function_count]_identifier
+		%xdefine %$function_%[%$function_count]_address %$$function_%[%$function_count]_address
+		%xdefine %$function_%[%$function_count]_depth %$$function_%[%$function_count]_depth
 		%assign %$function_count %$function_count + 1
 	%endrep
 
@@ -317,12 +311,9 @@
 	%endif
 
 	; Parameter Checking
-	%ifnum %1
-		%fatal
-	%elifstr %1
-		%fatal
-	%elifid %1
-	%endif
+	%ifnid %1
+        %fatal
+    %endif
 
 	; Set Section For Runtime
 	section %$section
@@ -384,12 +375,9 @@
 	%endif
 
 	; Parameter Checking
-	%ifnum %1
-		%fatal
-	%elifstr %1
-		%fatal
-	%elifid %1
-	%endif
+	%ifnid %1
+        %fatal
+    %endif
 
 	; Append label Symbol
 	%xdefine %$label_%[%$label_count]_identifier %1
@@ -418,12 +406,9 @@
 	%endif
 
 	; Parameter Checking
-	%ifnum %1
-		%fatal
-	%elifstr %1
-		%fatal
-	%elifid %1
-	%endif
+	%ifnid %1
+        %fatal
+    %endif
 
 	; Set Section For Runtime
 	section %$section
@@ -463,26 +448,26 @@
 
 	; Copy Symbol Tables
 	%rep %$$array_count
-		%xdefine %$array_%[%$array_count]identifier %$$array%[%$array_count]_identifier
-		%xdefine %$array_%[%$array_count]address %$$array%[%$array_count]_address
-		%xdefine %$array_%[%$array_count]depth %$$array%[%$array_count]_depth
+		%xdefine %$array_%[%$array_count]_identifier %$$array_%[%$array_count]_identifier
+		%xdefine %$array_%[%$array_count]_address %$$array_%[%$array_count]_address
+		%xdefine %$array_%[%$array_count]_depth %$$array_%[%$array_count]_depth
 		%assign %$array_count %$array_count + 1
 	%endrep
 	%rep %$$struct_count
-		%xdefine %$struct_%[%$struct_count]identifier %$$struct%[%$struct_count]_identifier
-		%xdefine %$struct_%[%$struct_count]address %$$struct%[%$struct_count]_address
-		%xdefine %$struct_%[%$struct_count]size %$$struct%[%$struct_count]_size
-		%xdefine %$struct_%[%$struct_count]depth %$$struct%[%$struct_count]_depth
+		%xdefine %$struct_%[%$struct_count]_identifier %$$struct_%[%$struct_count]_identifier
+		%xdefine %$struct_%[%$struct_count]_address %$$struct_%[%$struct_count]_address
+		%xdefine %$struct_%[%$struct_count]_size %$$struct_%[%$struct_count]_size
+		%xdefine %$struct_%[%$struct_count]_depth %$$struct_%[%$struct_count]_depth
 		%assign %$struct_count %$struct_count + 1
 	%endrep
 	%rep %$$function_count
-		%xdefine %$function_%[%$function_count]identifier %$$function%[%$function_count]_identifier
-		%xdefine %$function_%[%$function_count]address %$$function%[%$function_count]_address
+		%xdefine %$function_%[%$function_count]_identifier %$$function_%[%$function_count]_identifier
+		%xdefine %$function_%[%$function_count]_address %$$function_%[%$function_count]_address
 		%assign %$function_count %$function_count + 1
 	%endrep
 	%rep %$$label_count
-		%xdefine %$label_%[%$label_count]identifier %$$label%[%$label_count]_identifier
-		%xdefine %$label_%[%$label_count]address %$$label%[%$label_count]_address
+		%xdefine %$label_%[%$label_count]_identifier %$$label_%[%$label_count]_identifier
+		%xdefine %$label_%[%$label_count]_address %$$label_%[%$label_count]_address
 		%assign %$label_count %$label_count + 1
 	%endrep
 
@@ -545,6 +530,38 @@
 
 %endmacro
 
+
+
+; Create Scope
+%push global
+%assign depth 0
+
+; Initialize Scope Variables
+%assign %$array_count 0
+%assign %$struct_count 0
+%assign %$function_count 0
+
+; Helper: load NUMBER/STRING/ID into a register
+%macro value_to_reg 2
+    %ifnum %2
+        mov %1, %2
+    %elifstr %2
+        %%str: db %2, 0
+        mov %1, %%str
+    %elifid %2
+        %assign counter 0
+        %rep %$array_count
+            %ifidni %$array_%[counter]_identifier, %2
+                mov %1, [%$array_%[counter]_address]
+                %exitrep
+            %endif
+            %assign counter %[counter] + 1
+        %endrep
+    %else
+        %error "value_to_reg: invalid operand"
+    %endif
+%endmacro
+
 %macro assign 2
 	
 	; Scope Checking
@@ -557,222 +574,386 @@
 	%endif
 
 	; Parameter Checking
-	%ifnum %1
-		%fatal
-	%elifstr %1
-		%fatal
-	%elifid %1
-	%endif
+	%ifnid %1
+        %fatal
+    %endif
 
 %endmacro
 %macro assign_add 3
-	; Scope Checking
-	%ifctx global
-		%fatal
-	%elifctx struct
-		%fatal
-	%elifctx function
-	%elifctx block
-	%endif
 
-	; Parameter Checking
-	%ifnum %1
-		%fatal
-	%elifstr %1
-		%fatal
-	%elifid %1
-	%endif
+    ; Scope Checking
+    %ifctx global
+        %fatal
+    %elifctx struct
+        %fatal
+    %elifctx function
+    %elifctx block
+    %endif
+
+    ; Parameter Checking
+    %ifnid %1
+        %fatal
+    %endif
+
+    ; Set Section For Runtime
+    section %$section
+
+    ; Runtime - dest = op1 + op2
+    value_to_reg rax, %2
+    value_to_reg rbx, %3
+    add rax, rbx
+    %assign counter 0
+    %rep %$array_count
+        %ifidni %$array_%[counter]_identifier, %1
+            mov [%$array_%[counter]_address], rax
+            %exitrep
+        %endif
+        %assign counter %[counter] + 1
+    %endrep
+
 %endmacro
 %macro assign_subtract 3
-	; Scope Checking
-	%ifctx global
-		%fatal
-	%elifctx struct
-		%fatal
-	%elifctx function
-	%elifctx block
-	%endif
 
-	; Parameter Checking
-	%ifnum %1
-		%fatal
-	%elifstr %1
-		%fatal
-	%elifid %1
-	%endif
+    ; Scope Checking
+    %ifctx global
+        %fatal
+    %elifctx struct
+        %fatal
+    %elifctx function
+    %elifctx block
+    %endif
+
+    ; Parameter Checking
+    %ifnid %1
+        %fatal
+    %endif
+
+    ; Set Section For Runtime
+    section %$section
+
+    ; Runtime - dest = op1 - op2
+    value_to_reg rax, %2
+    value_to_reg rbx, %3
+    sub rax, rbx
+    %assign counter 0
+    %rep %$array_count
+        %ifidni %$array_%[counter]_identifier, %1
+            mov [%$array_%[counter]_address], rax
+            %exitrep
+        %endif
+        %assign counter %[counter] + 1
+    %endrep
+
 %endmacro
 %macro assign_multiply 3
-	; Scope Checking
-	%ifctx global
-		%fatal
-	%elifctx struct
-		%fatal
-	%elifctx function
-	%elifctx block
-	%endif
 
-	; Parameter Checking
-	%ifnum %1
-		%fatal
-	%elifstr %1
-		%fatal
-	%elifid %1
-	%endif
+    ; Scope Checking
+    %ifctx global
+        %fatal
+    %elifctx struct
+        %fatal
+    %elifctx function
+    %elifctx block
+    %endif
+
+    ; Parameter Checking
+    %ifnid %1
+        %fatal
+    %endif
+
+    ; Set Section For Runtime
+    section %$section
+
+    ; Runtime - dest = op1 * op2
+    value_to_reg rax, %2
+    value_to_reg rbx, %3
+    imul rax, rbx
+    %assign counter 0
+    %rep %$array_count
+        %ifidni %$array_%[counter]_identifier, %1
+            mov [%$array_%[counter]_address], rax
+            %exitrep
+        %endif
+        %assign counter %[counter] + 1
+    %endrep
+
 %endmacro
 %macro assign_if_less_than 3
-	; Scope Checking
-	%ifctx global
-		%fatal
-	%elifctx struct
-		%fatal
-	%elifctx function
-	%elifctx block
-	%endif
 
-	; Parameter Checking
-	%ifnum %1
-		%fatal
-	%elifstr %1
-		%fatal
-	%elifid %1
-	%endif
+    ; Scope Checking
+    %ifctx global
+        %fatal
+    %elifctx struct
+        %fatal
+    %elifctx function
+    %elifctx block
+    %endif
+
+    ; Parameter Checking
+    %ifnid %1
+        %fatal
+    %endif
+
+    ; Set Section For Runtime
+    section %$section
+
+    ; Runtime - dest = (op1 < op2)
+    value_to_reg rax, %2
+    value_to_reg rbx, %3
+    cmp rax, rbx
+    setl al
+    movzx rax, al
+    %assign counter 0
+    %rep %$array_count
+        %ifidni %$array_%[counter]_identifier, %1
+            mov [%$array_%[counter]_address], rax
+            %exitrep
+        %endif
+        %assign counter %[counter] + 1
+    %endrep
+
 %endmacro
 %macro assign_if_more_than 3
-	; Scope Checking
-	%ifctx global
-		%fatal
-	%elifctx struct
-		%fatal
-	%elifctx function
-	%elifctx block
-	%endif
 
-	; Parameter Checking
-	%ifnum %1
-		%fatal
-	%elifstr %1
-		%fatal
-	%elifid %1
-	%endif
+    ; Scope Checking
+    %ifctx global
+        %fatal
+    %elifctx struct
+        %fatal
+    %elifctx function
+    %elifctx block
+    %endif
+
+    ; Parameter Checking
+    %ifnid %1
+        %fatal
+    %endif
+
+    ; Set Section For Runtime
+    section %$section
+
+    ; Runtime - dest = (op1 > op2)
+    value_to_reg rax, %2
+    value_to_reg rbx, %3
+    cmp rax, rbx
+    setg al
+    movzx rax, al
+    %assign counter 0
+    %rep %$array_count
+        %ifidni %$array_%[counter]_identifier, %1
+            mov [%$array_%[counter]_address], rax
+            %exitrep
+        %endif
+        %assign counter %[counter] + 1
+    %endrep
+
 %endmacro
 %macro assign_if_less_or_equal_than 3
-	; Scope Checking
-	%ifctx global
-		%fatal
-	%elifctx struct
-		%fatal
-	%elifctx function
-	%elifctx block
-	%endif
 
-	; Parameter Checking
-	%ifnum %1
-		%fatal
-	%elifstr %1
-		%fatal
-	%elifid %1
-	%endif
+    ; Scope Checking
+    %ifctx global
+        %fatal
+    %elifctx struct
+        %fatal
+    %elifctx function
+    %elifctx block
+    %endif
+
+    ; Parameter Checking
+    %ifnid %1
+        %fatal
+    %endif
+
+    ; Set Section For Runtime
+    section %$section
+
+    ; Runtime - dest = (op1 <= op2)
+    value_to_reg rax, %2
+    value_to_reg rbx, %3
+    cmp rax, rbx
+    setle al
+    movzx rax, al
+    %assign counter 0
+    %rep %$array_count
+        %ifidni %$array_%[counter]_identifier, %1
+            mov [%$array_%[counter]_address], rax
+            %exitrep
+        %endif
+        %assign counter %[counter] + 1
+    %endrep
+
 %endmacro
 %macro assign_if_more_or_equal_than 3
-	; Scope Checking
-	%ifctx global
-		%fatal
-	%elifctx struct
-		%fatal
-	%elifctx function
-	%elifctx block
-	%endif
 
-	; Parameter Checking
-	%ifnum %1
-		%fatal
-	%elifstr %1
-		%fatal
-	%elifid %1
-	%endif
+    ; Scope Checking
+    %ifctx global
+        %fatal
+    %elifctx struct
+        %fatal
+    %elifctx function
+    %elifctx block
+    %endif
+
+    ; Parameter Checking
+    %ifnid %1
+        %fatal
+    %endif
+
+    ; Set Section For Runtime
+    section %$section
+
+    ; Runtime - dest = (op1 >= op2)
+    value_to_reg rax, %2
+    value_to_reg rbx, %3
+    cmp rax, rbx
+    setge al
+    movzx rax, al
+    %assign counter 0
+    %rep %$array_count
+        %ifidni %$array_%[counter]_identifier, %1
+            mov [%$array_%[counter]_address], rax
+            %exitrep
+        %endif
+        %assign counter %[counter] + 1
+    %endrep
+
 %endmacro
 %macro assign_if_equal 3
-	; Scope Checking
-	%ifctx global
-		%fatal
-	%elifctx struct
-		%fatal
-	%elifctx function
-	%elifctx block
-	%endif
 
-	; Parameter Checking
-	%ifnum %1
-		%fatal
-	%elifstr %1
-		%fatal
-	%elifid %1
-	%endif
+    ; Scope Checking
+    %ifctx global
+        %fatal
+    %elifctx struct
+        %fatal
+    %elifctx function
+    %elifctx block
+    %endif
+
+    ; Parameter Checking
+    %ifnid %1
+        %fatal
+    %endif
+
+    ; Set Section For Runtime
+    section %$section
+
+    ; Runtime - dest = (op1 == op2)
+    value_to_reg rax, %2
+    value_to_reg rbx, %3
+    cmp rax, rbx
+    sete al
+    movzx rax, al
+    %assign counter 0
+    %rep %$array_count
+        %ifidni %$array_%[counter]_identifier, %1
+            mov [%$array_%[counter]_address], rax
+            %exitrep
+        %endif
+        %assign counter %[counter] + 1
+    %endrep
+
 %endmacro
 %macro assign_if_not_equal 3
-	; Scope Checking
-	%ifctx global
-		%fatal
-	%elifctx struct
-		%fatal
-	%elifctx function
-	%elifctx block
-	%endif
 
-	; Parameter Checking
-	%ifnum %1
-		%fatal
-	%elifstr %1
-		%fatal
-	%elifid %1
-	%endif
+    ; Scope Checking
+    %ifctx global
+        %fatal
+    %elifctx struct
+        %fatal
+    %elifctx function
+    %elifctx block
+    %endif
+
+    ; Parameter Checking
+    %ifnid %1
+        %fatal
+    %endif
+
+    ; Set Section For Runtime
+    section %$section
+
+    ; Runtime - dest = (op1 != op2)
+    value_to_reg rax, %2
+    value_to_reg rbx, %3
+    cmp rax, rbx
+    setne al
+    movzx rax, al
+    %assign counter 0
+    %rep %$array_count
+        %ifidni %$array_%[counter]_identifier, %1
+            mov [%$array_%[counter]_address], rax
+            %exitrep
+        %endif
+        %assign counter %[counter] + 1
+    %endrep
+
 %endmacro
+
 %macro asm 1
-	; Scope Checking
-	%ifctx global
-		%fatal
-	%elifctx struct
-		%fatal
-	%elifctx function
-	%elifctx block
-	%endif
+    ; Scope Checking
+    %ifctx global
+        %fatal
+    %elifctx struct
+        %fatal
+    %elifctx function
+    %elifctx block
+    %endif
 
-	; Parameter Checking
-	%ifnum %1
-	%elifstr %1
-	%elifid %1
-		%fatal
-	%endif
+    ; Parameter Checking
+    %ifnum %1
+    %elifstr %1
+    %elifid %1
+        %fatal
+    %endif
 
-	; Tokenize String
-	%tok(%1)
+    ; Runtime - Inline ASM
+    %tok(%1)
+
 %endmacro
+
 %macro assign_sizeof 2
-	
-	; Scope Checking
-	%ifctx global
-		%fatal
-	%elifctx struct
-		%fatal
-	%elifctx function
-	%elifctx block
-	%endif
+    ; Scope Checking
+    %ifctx global
+        %fatal
+    %elifctx struct
+        %fatal
+    %elifctx function
+    %elifctx block
+    %endif
 
-	; Parameter Checking
-	%ifnum %1
-		%fatal
-	%elifstr %1
-		%fatal
-	%elifid %1
-	%endif
-	%ifnum %2
-		%fatal
-	%elifstr %2
-		%fatal
-	%elifid %2
-	%endif
+    ; Parameter Checking
+    %ifnid %1
+        %fatal
+    %endif
+
+    ; Set Section For Runtime
+    section %$section
+
+    ; Runtime - dest = sizeof(struct)
+    %assign counter 0
+    %assign __found 0
+    %rep %$struct_count
+        %ifidni %$struct_%[counter]_identifier, %2
+            mov rax, %$struct_%[counter]_size
+            %assign __found 1
+            %exitrep
+        %endif
+        %assign counter %[counter] + 1
+    %endrep
+    %if __found = 0
+        %error "assign_sizeof: unknown struct"
+    %endif
+    %assign counter 0
+    %rep %$array_count
+        %ifidni %$array_%[counter]_identifier, %1
+            mov [%$array_%[counter]_address], rax
+            %exitrep
+        %endif
+        %assign counter %[counter] + 1
+    %endrep
 
 %endmacro
+
 
 %macro end 0-*
 	
@@ -809,12 +990,12 @@
 		%rep %$array_count
 			%if %$array_%[counter]_depth == %[depth]
 				%ifidni %$array_%[counter]_access_modifier, public
-					%xdefine array_public_%[array_public_count]identifier %$array%[counter]_identifier
-					%xdefine array_public_%[array_public_count]address %$array%[counter]_address
+					%xdefine array_public_%[array_public_count]_identifier %$array_%[counter]_identifier
+					%xdefine array_public_%[array_public_count]_address %$array_%[counter]_address
 					%assign array_public_count %[array_public_count] + 1
 				%elifidni %$array_%[counter]_access_modifier, protected
-					%xdefine array_protected_%[array_protected_count]identifier %$array%[counter]_identifier
-					%xdefine array_protected_%[array_protected_count]address %$array%[counter]_address
+					%xdefine array_protected_%[array_protected_count]_identifier %$array_%[counter]_identifier
+					%xdefine array_protected_%[array_protected_count]_address %$array_%[counter]_address
 					%assign array_protected_count %[array_protected_count] + 1
 				%endif
 			%endif
@@ -824,14 +1005,14 @@
 		%rep %$struct_count
 			%if %$struct_%[counter]_depth == %[depth]
 				%ifidni %$struct_%[counter]_access_modifier, public
-					%xdefine struct_public_%[struct_public_count]identifier %$struct%[counter]_identifier
-					%xdefine struct_public_%[struct_public_count]address %$struct%[counter]_address
-					%xdefine struct_public_%[struct_public_count]size %$struct%[counter]_size
+					%xdefine struct_public_%[struct_public_count]_identifier %$struct_%[counter]_identifier
+					%xdefine struct_public_%[struct_public_count]_address %$struct_%[counter]_address
+					%xdefine struct_public_%[struct_public_count]_size %$struct_%[counter]_size
 					%assign struct_public_count %[struct_public_count] + 1
 				%elifidni %$struct_%[counter]_access_modifier, protected
-					%xdefine struct_protected_%[struct_protected_count]identifier %$struct%[counter]_identifier
-					%xdefine struct_protected_%[struct_protected_count]address %$struct%[counter]_address
-					%xdefine struct_protected_%[struct_protected_count]size %$struct%[counter]_size
+					%xdefine struct_protected_%[struct_protected_count]_identifier %$struct_%[counter]_identifier
+					%xdefine struct_protected_%[struct_protected_count]_address %$struct_%[counter]_address
+					%xdefine struct_protected_%[struct_protected_count]_size %$struct_%[counter]_size
 					%assign struct_protected_count %[struct_protected_count] + 1
 				%endif
 			%endif
@@ -841,12 +1022,12 @@
 		%rep %$function_count
 			%if %$function_%[counter]_depth == %[depth]
 				%ifidni %$function_%[counter]_access_modifier, public
-					%xdefine function_public_%[function_public_count]identifier %$function%[counter]_identifier
-					%xdefine function_public_%[function_public_count]address %$function%[counter]_address
+					%xdefine function_public_%[function_public_count]_identifier %$function_%[counter]_identifier
+					%xdefine function_public_%[function_public_count]_address %$function_%[counter]_address
 					%assign function_public_count %[function_public_count] + 1
 				%elifidni %$function_%[counter]_access_modifier, protected
-					%xdefine function_protected_%[function_protected_count]identifier %$function%[counter]_identifier
-					%xdefine function_protected_%[function_protected_count]address %$function%[counter]_address
+					%xdefine function_protected_%[function_protected_count]_identifier %$function_%[counter]_identifier
+					%xdefine function_protected_%[function_protected_count]_address %$function_%[counter]_address
 					%assign function_protected_count %[function_protected_count] + 1
 				%endif
 			%endif
@@ -885,29 +1066,32 @@
 		; Redeclare Public Variables
 		%assign counter 0
 		%rep %[array_public_count]
-			%xdefine %$array_%[%$array_count]identifier array_public%[counter]_identifier
-			%xdefine %$array_%[%$array_count]address array_public%[counter]_address
+			%xdefine %$array_%[%$array_count]_identifier array_public_%[counter]_identifier
+			%xdefine %$array_%[%$array_count]_address array_public_%[counter]_address
 			%xdefine %$array_%[%$array_count]_depth %[depth]
 			%assign %$array_count %$array_count + 1
 			%assign counter %[counter] + 1
 		%endrep
 		%assign counter 0
 		%rep %[struct_public_count]
-			%xdefine %$struct_%[%$struct_count]identifier struct_public%[counter]_identifier
-			%xdefine %$struct_%[%$struct_count]address struct_public%[counter]_address
-			%xdefine %$struct_%[%$struct_count]size struct_public%[counter]_size
+			%xdefine %$struct_%[%$struct_count]_identifier struct_public_%[counter]_identifier
+			%xdefine %$struct_%[%$struct_count]_address struct_public_%[counter]_address
+			%xdefine %$struct_%[%$struct_count]_size struct_public_%[counter]_size
 			%xdefine %$struct_%[%$struct_count]_depth %[depth]
 			%assign %$struct_count %$struct_count + 1
 			%assign counter %[counter] + 1
 		%endrep
 		%assign counter 0
 		%rep %[function_public_count]
-			%xdefine %$function_%[%$function_count]identifier function_public%[counter]_identifier
-			%xdefine %$function_%[%$function_count]address function_public%[counter]_address
+			%xdefine %$function_%[%$function_count]_identifier function_public_%[counter]_identifier
+			%xdefine %$function_%[%$function_count]_address function_public_%[counter]_address
 			%xdefine %$function_%[%$function_count]_depth %[depth]
 			%assign %$function_count %$function_count + 1
 			%assign counter %[counter] + 1
 		%endrep
+
+		; Put in struct protected symbol table
+		; TODO
 
 	%elifctx function
 	%elifctx block

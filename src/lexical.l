@@ -1,7 +1,7 @@
 %{
 #include <stdio.h>
 #include <string.h>
-#include "semantic/ast.h"
+#include "syntactical.tab.h"
 #include "parser.tab.h"
 
 extern YYSTYPE yylval;
