@@ -11,6 +11,7 @@
 *.ilk
 *.map
 *.exp
+*.compiler
 
 # Precompiled Headers
 *.gch
@@ -50,10 +51,5 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
-compiler
-parser.tab.c
-parser.tab.h
-lex.yy.c
-
-# debug information files
-*.dwo
+# Build directory
+build/
