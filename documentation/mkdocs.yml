@@ -1,48 +1,55 @@
 site_name: Compilador - Aureliani
-site_url: https://mydomain.org/mysite
+site_url: https://lugit00.github.io/CompilerDisciplineAssignment
 markdown_extensions:
-  - admonition
-  - pymdownx.tabbed:
-      alternate_style: true
-  - pymdownx.superfences
-  - attr_list
-theme:
-  name: material
-  features:
-    - navigation.instant
-    - navigation.instant.progress
-    - navigation.instant.preview
-    - navigation.tracking
-    - navigation.tabs
-    - navigation.tabs.sticky
-    - navigation.sections
-    - navigation.expand
-  palette: 
-    # Palette toggle for light mode
-    - scheme: default
-      accent: black
-      primary: black
-      toggle:
-        icon: material/brightness-7 
-        name: Switch to dark mode
+- admonition
+- pymdownx.tabbed:
+alternate_style: true
+- pymdownx.superfences
+- attr_list
 
-    # Palette toggle for dark mode
-    - scheme: slate
-      accent: black
-      primary: black
-      toggle:
-        icon: material/brightness-4
-        name: Switch to light mode
+
+theme:
+name: material
+features:
+- navigation.instant
+- navigation.instant.progress
+- navigation.instant.preview
+- navigation.tracking
+- navigation.tabs
+- navigation.tabs.sticky
+- navigation.sections
+- navigation.expand
+palette:
+- scheme: default
+accent: black
+primary: black
+toggle:
+icon: material/brightness-7
+name: Switch to dark mode
+
+
+- scheme: slate
+accent: black
+primary: black
+toggle:
+icon: material/brightness-4
+name: Switch to light mode
+
 
 nav:
-  - Início: index.md
-  
-  - Gerenciamento do Backlog:
-      - 1.1 Backlog: Backlog/backlog.md
+- Introdução ao Projeto:
+- index: docs/index.md
 
-#  - Sprints:
-#    - Sprint 01: 
 
-#  - Cronograma:
-#    - Concepção - OpenUP: evidencias/concepcao_OpenUP.md
+- Backlog do Produto:
+- Estrutura do Backlog: docs/Backlog/backlog.md
+- Priorização: docs/Backlog/priorizacao.md
+- Backlog Priorizado: docs/Backlog/backlog_priorizado.md
 
+
+- Cronograma de Sprints:
+- Cronograma: docs/Backlog/cronograma.md
+
+
+- Relatos das Sprints:
+- Sprint 01: docs/Relatos/Sprint_01.md
