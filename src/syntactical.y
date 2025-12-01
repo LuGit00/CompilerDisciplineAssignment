@@ -4,181 +4,254 @@
 #include <string.h>
 #include "semantic/ast.h"
 #include "semantic/symbol_table.h"
-
-extern int yylex();
+extern int yylex(void);
 extern void yyerror(const char *s);
-
-ASTNode *root = NULL;
-
-// Função auxiliar para verificar tipos
-SymbolType get_expression_type(ASTNode *node) {
-    if (!node) return SYM_UNKNOWN;
-    switch (node->type) {
-        case NODE_ID: {
-            Symbol *sym = lookup_symbol(node->value);
-            if (sym) return sym->type;
-            fprintf(stderr, "Erro semântico: Variável ‘%s’ não declarada.\n", node->value);
-            return SYM_UNKNOWN;
-        }
-        case NODE_NUMBER: // Simplificado: assume que todos os números são INT por enquanto
-            return SYM_INT;
-        case NODE_ADD:
-        case NODE_SUB:
-        case NODE_MUL:
-        case NODE_DIV: {
-            SymbolType left_type = get_expression_type(node->left);
-            SymbolType right_type = get_expression_type(node->right);
-            if (left_type == SYM_UNKNOWN || right_type == SYM_UNKNOWN) return SYM_UNKNOWN;
-            if (left_type == SYM_FLOAT || right_type == SYM_FLOAT) return SYM_FLOAT;
-            return SYM_INT;
-        }
-        default: return SYM_UNKNOWN;
-    }
-}
-
-// Função auxiliar para verificar compatibilidade de tipos em atribuições
-void check_assignment_type(ASTNode *id_node, ASTNode *expr_node) {
-    Symbol *id_sym = lookup_symbol(id_node->value);
-    if (!id_sym) {
-        fprintf(stderr, "Erro semântico: Variável ‘%s’ não declarada na atribuição.\n", id_node->value);
-        return;
-    }
-    SymbolType expr_type = get_expression_type(expr_node);
-    if (expr_type == SYM_UNKNOWN) return;
-
-    if (id_sym->type == SYM_INT && expr_type == SYM_FLOAT) {
-        fprintf(stderr, "Aviso semântico: Atribuição de float para int (perda de precisão) na variável ‘%s’.\n", id_sym->name);
-    } else if (id_sym->type == SYM_FLOAT && expr_type == SYM_INT) {
-        // Coerção implícita de int para float é geralmente aceitável
-    } else if (id_sym->type != expr_type) {
-        fprintf(stderr, "Erro semântico: Tipos incompatíveis na atribuição para ‘%s’.\n", id_sym->name);
-    }
-}
-
+extern FILE *yyin;
+static FILE *out_file = NULL;
+static char *out_filename = NULL;
 %}
-
 %union {
     int ival;
     float fval;
     char *sval;
     ASTNode *node;
 }
-
+%token ARRAY STRUCT PRIVATE PROTECTED PUBLIC FUNCTION EXECUTE RETURN LABEL GOTO BLOCK IF ELIF ELSE ASSIGN ASSIGN_ADD ASSIGN_SUBTRACT ASSIGN_MULTIPLY ASSIGN_IF_LESS_THAN ASSIGN_IF_MORE_THAN ASSIGN_IF_LESS_OR_EQUAL_THAN ASSIGN_IF_MORE_OR_EQUAL_THAN ASSIGN_IF_EQUAL ASSIGN_IF_NOT_EQUAL ASM ASSIGN_SIZEOF END
 %token <sval> ID
 %token <sval> NUMBER
-%token INT FLOAT IF ELSE WHILE RETURN PRINT
-%token ASSIGN ADD SUB MUL DIV EQ NE LT GT LE GE
-%token LPAREN RPAREN LBRACE RBRACE SEMICOLON
-
-%type <node> program function_definition_list function_definition statement_list statement declaration expression assignment_statement while_statement return_statement print_statement
-%type <node> term factor relational_expression block
-%type <node> matched_statement unmatched_statement
-
-%start program
-
-%nonassoc IFX
-%nonassoc ELSE
-
+%token <sval> STRING
+%type  <sval> num_str_id
+%start global_scope
 %%
-
-program:
-    function_definition_list { root = $1; }
-    ;
-
-function_definition_list:
-    function_definition_list function_definition { $$ = create_node(NODE_PROGRAM, $1, $2, NULL, NULL); }
-    | function_definition { $$ = $1; }
-    ;
-
-function_definition:
-    INT ID LPAREN RPAREN LBRACE { enter_scope(); add_symbol($2, SYM_FUNCTION); } statement_list RBRACE { exit_scope(); $$ = create_node(NODE_FUNCTION_DEFINITION, create_leaf(NODE_TYPE_INT, NULL), create_leaf(NODE_ID, $2), $7, NULL); free($2); }
-    ;
-
-statement_list:
-    statement_list statement { $$ = create_node(NODE_STATEMENT_LIST, $1, $2, NULL, NULL); }
-    | { $$ = NULL; } // Lista de statements pode ser vazia
-    ;
-
-statement:
-    matched_statement
-    | unmatched_statement
-    ;
-
-matched_statement:
-    declaration SEMICOLON { $$ = $1; }
-    | assignment_statement SEMICOLON { $$ = $1; }
-    | return_statement SEMICOLON { $$ = $1; }
-    | print_statement SEMICOLON { $$ = $1; }
-    | while_statement
-    | IF LPAREN relational_expression RPAREN matched_statement ELSE matched_statement { $$ = create_node(NODE_IF_ELSE, $3, $5, $7, NULL); }
-    | block { $$ = $1; }
-
-unmatched_statement:
-    IF LPAREN relational_expression RPAREN statement
-    | IF LPAREN relational_expression RPAREN matched_statement ELSE unmatched_statement
-    ;
-
-block:
-    LBRACE { enter_scope(); } statement_list RBRACE { exit_scope(); $$ = $3; }
-    ;
-
-declaration:
-    INT ID { add_symbol($2, SYM_INT); $$ = create_node(NODE_DECLARATION, create_leaf(NODE_TYPE_INT, NULL), create_leaf(NODE_ID, $2), NULL, NULL); free($2); }
-    | FLOAT ID { add_symbol($2, SYM_FLOAT); $$ = create_node(NODE_DECLARATION, create_leaf(NODE_TYPE_FLOAT, NULL), create_leaf(NODE_ID, $2), NULL, NULL); free($2); }
-    ;
-
-assignment_statement:
-    ID ASSIGN expression { check_assignment_type(create_leaf(NODE_ID, $1), $3); $$ = create_node(NODE_ASSIGNMENT, create_leaf(NODE_ID, $1), $3, NULL, NULL); free($1); }
-    ;
-
-expression:
-    expression ADD term { $$ = create_node(NODE_ADD, $1, $3, NULL, NULL); }
-    | expression SUB term { $$ = create_node(NODE_SUB, $1, $3, NULL, NULL); }
-    | term { $$ = $1; }
-    ;
-
-term:
-    term MUL factor { $$ = create_node(NODE_MUL, $1, $3, NULL, NULL); }
-    | term DIV factor { $$ = create_node(NODE_DIV, $1, $3, NULL, NULL); }
-    | factor { $$ = $1; }
-    ;
-
-factor:
-    NUMBER { $$ = create_leaf(NODE_NUMBER, $1); free($1); }
-    | ID { 
-        Symbol *sym = lookup_symbol($1);
-        if (!sym) {
-            fprintf(stderr, "Erro semântico: Variável ‘%s’ não declarada.\n", $1);
+array_declaration
+    : ARRAY ID NUMBER
+        {
+            fprintf(out_file,"array %s %s\n",$2,$3);
         }
-        $$ = create_leaf(NODE_ID, $1); free($1); 
-    }
-    | LPAREN expression RPAREN { $$ = $2; }
     ;
-
-relational_expression:
-    expression EQ expression { $$ = create_node(NODE_EQ, $1, $3, NULL, NULL); }
-    | expression NE expression { $$ = create_node(NODE_NE, $1, $3, NULL, NULL); }
-    | expression LT expression { $$ = create_node(NODE_LT, $1, $3, NULL, NULL); }
-    | expression GT expression { $$ = create_node(NODE_GT, $1, $3, NULL, NULL); }
-    | expression LE expression { $$ = create_node(NODE_LE, $1, $3, NULL, NULL); }
-    | expression GE expression { $$ = create_node(NODE_GE, $1, $3, NULL, NULL); }
+struct_declaration
+    : STRUCT ID IDs struct_scope END IDs
+        {
+            fprintf(out_file,"struct %s\n",$2);
+        }
     ;
-
-while_statement:
-    WHILE LPAREN relational_expression RPAREN block { $$ = create_node(NODE_WHILE, $3, $5, NULL, NULL); }
+function_declaration
+    : FUNCTION ID function_scope END
+        {
+            fprintf(out_file,"function %s\n",$2);
+        }
     ;
-
-return_statement:
-    RETURN expression { $$ = create_node(NODE_RETURN, $2, NULL, NULL, NULL); }
+IDs
+    : ID
+        {
+        }
+    | IDs ID
+        {
+        }
     ;
-
-print_statement:
-    PRINT LPAREN expression RPAREN { $$ = create_node(NODE_PRINT, $3, NULL, NULL, NULL); }
-    | PRINT LPAREN ID RPAREN { $$ = create_node(NODE_PRINT, create_leaf(NODE_ID, $3), NULL, NULL, NULL); free($3); }
+num_str_id
+    : NUMBER { $$ = $1; }
+    | STRING { $$ = $1; }
+    | ID     { $$ = $1; }
     ;
-
+function_scope
+    : array_declaration
+    | struct_declaration
+    | function_declaration
+    | EXECUTE ID num_str_id num_str_id
+        {
+            fprintf(out_file,"execute %s %s %s\n",$2,$3,$4);
+        }
+    | RETURN ID num_str_id num_str_id
+        {
+            fprintf(out_file,"return %s %s %s\n",$2,$3,$4);
+        }
+    | LABEL ID num_str_id num_str_id
+        {
+            fprintf(out_file,"label %s %s %s\n",$2,$3,$4);
+        }
+    | GOTO ID num_str_id num_str_id
+        {
+            fprintf(out_file,"goto %s %s %s\n",$2,$3,$4);
+        }
+    | BLOCK ID num_str_id num_str_id
+        {
+            fprintf(out_file,"block %s %s %s\n",$2,$3,$4);
+        }
+    | IF ID num_str_id num_str_id
+        {
+            fprintf(out_file,"if %s %s %s\n",$2,$3,$4);
+        }
+    | ELIF ID num_str_id num_str_id
+        {
+            fprintf(out_file,"elif %s %s %s\n",$2,$3,$4);
+        }
+    | ELSE ID num_str_id num_str_id
+        {
+            fprintf(out_file,"else %s %s %s\n",$2,$3,$4);
+        }
+    | ASSIGN ID num_str_id num_str_id
+        {
+            fprintf(out_file,"assign %s %s %s\n",$2,$3,$4);
+        }
+    | ASSIGN_ADD ID num_str_id num_str_id
+        {
+            fprintf(out_file,"assign_add %s %s %s\n",$2,$3,$4);
+        }
+    | ASSIGN_SUBTRACT ID num_str_id num_str_id
+        {
+            fprintf(out_file,"assign_subtract %s %s %s\n",$2,$3,$4);
+        }
+    | ASSIGN_MULTIPLY ID num_str_id num_str_id
+        {
+            fprintf(out_file,"assign_multiply %s %s %s\n",$2,$3,$4);
+        }
+    | ASSIGN_IF_LESS_THAN ID num_str_id num_str_id
+        {
+            fprintf(out_file,"assign_if_less_than %s %s %s\n",$2,$3,$4);
+        }
+    | ASSIGN_IF_MORE_THAN ID num_str_id num_str_id
+        {
+            fprintf(out_file,"assign_if_more_than %s %s %s\n",$2,$3,$4);
+        }
+    | ASSIGN_IF_LESS_OR_EQUAL_THAN ID num_str_id num_str_id
+        {
+            fprintf(out_file,"assign_if_less_or_equal_than %s %s %s\n",$2,$3,$4);
+        }
+    | ASSIGN_IF_MORE_OR_EQUAL_THAN ID num_str_id num_str_id
+        {
+            fprintf(out_file,"assign_if_more_or_equal_than %s %s %s\n",$2,$3,$4);
+        }
+    | ASSIGN_IF_EQUAL ID num_str_id num_str_id
+        {
+            fprintf(out_file,"assign_if_equal %s %s %s\n",$2,$3,$4);
+        }
+    | ASSIGN_IF_NOT_EQUAL ID num_str_id num_str_id
+        {
+            fprintf(out_file,"assign_if_not_equal %s %s %s\n",$2,$3,$4);
+        }
+    | ASM STRING
+        {
+            fprintf(out_file,"asm %s\n",$2);
+        }
+    | ASSIGN_SIZEOF ID ID
+        {
+            fprintf(out_file,"assign_sizeof %s %s\n",$2,$3);
+        }
+    | END
+        {
+            fprintf(out_file,"end\n");
+        }
+    ;
+struct_scope
+    : array_declaration
+    | struct_declaration
+    | function_declaration
+    ;
+global_statement
+    : array_declaration
+    | struct_declaration
+    | function_declaration
+    ;
+global_scope
+    : global_statement
+    | global_scope global_statement
+    ;
 %%
-
-void yyerror(const char *s) {
-    fprintf(stderr, "Erro de sintaxe: %s\n", s);
+void yyerror(const char *s)
+{
+    fprintf(stderr,"Erro de sintaxe: %s\n",s);
+}
+int yyparse(void);
+int main(int argc,char **argv)
+{
+    const char *input_name = NULL;
+    const char *output_name = NULL;
+    FILE *in;
+    int i;
+    if(argc < 2)
+    {
+        fprintf(stderr,"usage: %s input_file [ -o output_file ]\n",argv[0]);
+        return 1;
+    }
+    for(i = 1; i < argc; ++i)
+    {
+        if(strcmp(argv[i],"-o") == 0 && i + 1 < argc)
+        {
+            output_name = argv[++i];
+        }
+        else if(argv[i][0] != '-' && !input_name)
+        {
+            input_name = argv[i];
+        }
+    }
+    if(!input_name)
+    {
+        fprintf(stderr,"no input file\n");
+        return 1;
+    }
+    in = fopen(input_name,"r");
+    if(!in)
+    {
+        perror("fopen input");
+        return 1;
+    }
+    yyin = in;
+    if(output_name)
+    {
+        out_filename = strdup(output_name);
+    }
+    else
+    {
+        size_t len = strlen(input_name);
+        out_filename = malloc(len + 5);
+        if(!out_filename)
+        {
+            perror("malloc");
+            fclose(in);
+            return 1;
+        }
+        strcpy(out_filename,input_name);
+        char *dot = strrchr(out_filename,'.');
+        if(dot)
+            strcpy(dot,".asm");
+        else
+            strcat(out_filename,".asm");
+    }
+    out_file = fopen(out_filename,"w");
+    if(!out_file)
+    {
+        perror("fopen output");
+        fclose(in);
+        free(out_filename);
+        return 1;
+    }
+    fprintf(out_file,"%%include \"semantical.asm\"\n");
+    if(yyparse() != 0)
+    {
+        fprintf(stderr,"Parsing failed.\n");
+        fclose(in);
+        fclose(out_file);
+        free(out_filename);
+        return 1;
+    }
+    fclose(in);
+    if(fclose(out_file) != 0)
+    {
+        perror("fclose output");
+        free(out_filename);
+        return 1;
+    }
+    {
+        char cmd[512];
+        snprintf(cmd,sizeof(cmd),"nasm -felf64 %s",out_filename);
+        if(system(cmd) != 0)
+        {
+            fprintf(stderr,"nasm invocation failed.\n");
+            free(out_filename);
+            return 1;
+        }
+    }
+    free(out_filename);
+    return 0;
 }
